@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenPercento - 极简记账</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/themes.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/OpenPercento.PNG">
+    <link rel="apple-touch-icon" href="icons/OpenPercento.PNG">
+    <meta name="theme-color" content="#E0E8F0">
+</head>
+
+<body>
+    <!-- 密码锁屏 -->
+    <div id="lockScreen" class="lock-screen hidden">
+        <div class="lock-container">
+            <div class="lock-icon">🔒</div>
+            <h2 data-i18n="enterPassword">输入密码</h2>
+            <div class="pin-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+            <div class="pin-pad">
+                <button class="pin-btn" data-num="1">1</button>
+                <button class="pin-btn" data-num="2">2</button>
+                <button class="pin-btn" data-num="3">3</button>
+                <button class="pin-btn" data-num="4">4</button>
+                <button class="pin-btn" data-num="5">5</button>
+                <button class="pin-btn" data-num="6">6</button>
+                <button class="pin-btn" data-num="7">7</button>
+                <button class="pin-btn" data-num="8">8</button>
+                <button class="pin-btn" data-num="9">9</button>
+                <button class="pin-btn" data-num="clear">⌫</button>
+                <button class="pin-btn" data-num="0">0</button>
+                <button class="pin-btn" data-num="ok">✓</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用 -->
+    <div id="app" class="app-container">
+        <!-- 侧边栏 -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">OpenPercento</h1>
+            </div>
+
+            <!-- 导航菜单 -->
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9,22 9,12 15,12 15,22" />
+                    </svg>
+                    <span data-i18n="dashboard">总览</span>
+                </a>
+                <a href="#" class="nav-item" data-page="accounts">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <line x1="2" y1="10" x2="22" y2="10" />
+                    </svg>
+                    <span data-i18n="accounts">账户</span>
+                </a>
+                <a href="#" class="nav-item" data-page="investments">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polyline points="22,7 13.5,15.5 8.5,10.5 2,17" />
+                        <polyline points="16,7 22,7 22,13" />
+                    </svg>
+                    <span data-i18n="investments">投资</span>
+                </a>
+                <a href="#" class="nav-item" data-page="data">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7,10 12,15 17,10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span data-i18n="dataManagement">数据</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    <span data-i18n="settings">设置</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-allocation">
+                <div class="sidebar-allocation-title" data-i18n="assetAllocation">净资产配比</div>
+                <div class="sidebar-allocation-square" id="netWorthAllocationSquare"></div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main id="mainContent" class="main-content">
+            <!-- 总览页面 -->
+            <section id="pageDashboard" class="page active">
+                <header class="page-header">
+                    <h2 data-i18n="dashboard">总览</h2>
+                    <button id="btnQuickUpdate" class="btn btn-primary" title="Ctrl+U">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                            height="16">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span data-i18n="updateBalance">更新余额</span>
+                    </button>
+                </header>
+
+                <!-- 资产概览卡片 -->
+                <div class="dashboard-cards">
+                    <div class="stat-card net-worth-card">
+                        <span class="stat-label" data-i18n="netWorth">净资产</span>
+                        <span class="stat-value" id="dashboardNetWorth">¥0.00</span>
+                        <span class="stat-change positive" id="netWorthChange">+0.00%</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label" data-i18n="totalAssets">总资产</span>
+                        <span class="stat-value" id="dashboardAssets">¥0.00</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label" data-i18n="totalLiabilities">总负债</span>
+                        <span class="stat-value liability" id="dashboardLiabilities">¥0.00</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label" data-i18n="investmentValue">投资市值</span>
+                        <span class="stat-value" id="dashboardInvestments">¥0.00</span>
+                        <span class="stat-change" id="investmentChange">+0.00%</span>
+                    </div>
+                </div>
+
+                <!-- 快捷资产列表 -->
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3 data-i18n="recentAccounts">账户概览</h3>
+                        <a href="#" class="link-more" data-page="accounts" data-i18n="viewAll">查看全部</a>
+                    </div>
+                    <div class="account-list-mini" id="dashboardAccountList"></div>
+                </div>
+
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3 data-i18n="reminders">提醒</h3>
+                    </div>
+                    <div class="reminder-list" id="dashboardReminders"></div>
+                </div>
+
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3 data-i18n="charts">图表分析</h3>
+                        <button id="btnExportChart" class="btn btn-secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7,10 12,15 17,10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            <span data-i18n="exportChart">导出图表</span>
+                        </button>
+                    </div>
+
+                    <div class="filter-tabs" id="chartTimeTabs">
+                        <button class="filter-tab" data-period="week" data-i18n="week">周</button>
+                        <button class="filter-tab active" data-period="month" data-i18n="month">月</button>
+                        <button class="filter-tab" data-period="quarter" data-i18n="quarter">季</button>
+                        <button class="filter-tab" data-period="year" data-i18n="year">年</button>
+                        <button class="filter-tab" data-period="all" data-i18n="allTime">全部</button>
+                    </div>
+
+                    <div class="chart-section">
+                        <h3 data-i18n="netWorthTrend">净资产趋势</h3>
+                        <div class="chart-container">
+                            <canvas id="netWorthChart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- 账户页面 -->
+            <section id="pageAccounts" class="page">
+                <header class="page-header">
+                    <h2 data-i18n="accounts">账户</h2>
+                    <div class="page-header-actions">
+                        <button id="btnEditAccounts" class="btn btn-secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <path d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <span data-i18n="edit">编辑</span>
+                        </button>
+                        <button id="btnAddAccount" class="btn btn-primary" title="Ctrl+N">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            <span data-i18n="addAccount">添加账户</span>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- 账户分组筛选 -->
+                <div class="filter-tabs" id="accountGroupTabs">
+                    <button class="filter-tab active" data-group="all" data-i18n="all">全部</button>
+                    <button class="filter-tab" data-group="current" data-i18n="groupCurrent">流动资金</button>
+                    <button class="filter-tab" data-group="fixed" data-i18n="groupFixed">固定资产</button>
+                    <button class="filter-tab" data-group="receivable" data-i18n="groupReceivable">应收款</button>
+                    <button class="filter-tab" data-group="liability" data-i18n="groupLiability">负债</button>
+                </div>
+
+                <!-- 账户列表 -->
+                <div class="account-list" id="accountList"></div>
+            </section>
+
+            <!-- 投资页面 -->
+            <section id="pageInvestments" class="page">
+                <header class="page-header">
+                    <h2 data-i18n="investments">投资</h2>
+                    <button id="btnAddInvestment" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                            height="16">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span data-i18n="addInvestment">添加投资</span>
+                    </button>
+                </header>
+
+                <!-- 投资汇总 -->
+                <div class="investment-summary">
+                    <div class="summary-item">
+                        <span class="label" data-i18n="totalMarketValue">总市值</span>
+                        <span class="value" id="totalMarketValue">¥0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label" data-i18n="totalCost">总成本</span>
+                        <span class="value" id="totalCost">¥0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label" data-i18n="totalProfitLoss">总盈亏</span>
+                        <span class="value" id="totalProfitLoss">¥0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label" data-i18n="profitRate">收益率</span>
+                        <span class="value" id="profitRate">0.00%</span>
+                    </div>
+                </div>
+
+                <!-- 投资类型筛选 -->
+                <div class="filter-tabs" id="investmentTypeTabs">
+                    <button class="filter-tab active" data-type="all" data-i18n="all">全部</button>
+                    <button class="filter-tab" data-type="stock" data-i18n="typeStock">股票</button>
+                    <button class="filter-tab" data-type="fund" data-i18n="typeFund">基金</button>
+                    <button class="filter-tab" data-type="crypto" data-i18n="typeCrypto">加密货币</button>
+                    <button class="filter-tab" data-type="wealth" data-i18n="typeWealth">理财</button>
+                </div>
+
+                <!-- 投资列表 -->
+                <div class="investment-list" id="investmentList"></div>
+
+                <!-- 刷新价格按钮 -->
+                <button id="btnRefreshPrices" class="btn btn-secondary refresh-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                        height="16">
+                        <polyline points="23,4 23,10 17,10" />
+                        <polyline points="1,20 1,14 7,14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    <span data-i18n="refreshPrices">刷新价格</span>
+                </button>
+            </section>
+
+            <!-- 数据管理页面 -->
+            <section id="pageData" class="page">
+                <header class="page-header">
+                    <h2 data-i18n="dataManagement">数据管理</h2>
+                </header>
+
+                <div class="data-section">
+                    <h3 data-i18n="exportImport">导入/导出</h3>
+                    <div class="data-actions">
+                        <button id="btnExportCSV" class="btn btn-secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7,10 12,15 17,10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            <span data-i18n="exportCSV">导出CSV</span>
+                        </button>
+                        <button id="btnImportCSV" class="btn btn-secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17,8 12,3 7,8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <span data-i18n="importCSV">导入CSV</span>
+                        </button>
+                        <input type="file" id="csvFileInput" accept=".csv" hidden>
+                    </div>
+                </div>
+
+                <div class="data-section">
+                    <h3 data-i18n="webdavSync">WebDAV 同步</h3>
+                    <div class="form-group">
+                        <label data-i18n="webdavUrl">WebDAV 地址</label>
+                        <input type="url" id="webdavUrl" class="input" placeholder="https://your-server.com/dav/">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="webdavUser">用户名</label>
+                        <input type="text" id="webdavUser" class="input">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="webdavPass">密码</label>
+                        <input type="password" id="webdavPass" class="input">
+                    </div>
+                    <div class="data-actions">
+                        <button id="btnWebdavSync" class="btn btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <polyline points="23,4 23,10 17,10" />
+                                <polyline points="1,20 1,14 7,14" />
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                            </svg>
+                            <span data-i18n="syncNow">立即同步</span>
+                        </button>
+                        <button id="btnWebdavTest" class="btn btn-secondary">
+                            <span data-i18n="testConnection">测试连接</span>
+                        </button>
+                    </div>
+                    <p class="sync-status" id="syncStatus"></p>
+                </div>
+
+                <div class="data-section">
+                    <h3 data-i18n="passwordLock">密码锁</h3>
+                    <div class="toggle-group">
+                        <label data-i18n="enablePassword">启用密码锁</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="enablePassword">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="passwordSetup" class="hidden">
+                        <div class="form-group">
+                            <label data-i18n="setPassword">设置密码 (4位以上)</label>
+                            <input type="password" id="newPassword" class="input" minlength="4">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="confirmPassword">确认密码</label>
+                            <input type="password" id="confirmPassword" class="input" minlength="4">
+                        </div>
+                        <button id="btnSavePassword" class="btn btn-primary" data-i18n="savePassword">保存密码</button>
+                    </div>
+                </div>
+
+                <div class="data-section danger-zone">
+                    <h3 data-i18n="dangerZone">危险操作</h3>
+                    <button id="btnClearData" class="btn btn-danger">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                            height="16">
+                            <polyline points="3,6 5,6 21,6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        <span data-i18n="clearAllData">清除所有数据</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 设置页面 -->
+            <section id="pageSettings" class="page">
+                <header class="page-header">
+                    <h2 data-i18n="settings">设置</h2>
+                </header>
+
+                <div class="settings-section">
+                    <h3 data-i18n="appearance">外观</h3>
+                    <div class="setting-item">
+                        <span data-i18n="theme">主题</span>
+                        <div class="theme-toggle">
+                            <button class="theme-btn active" data-theme="light" title="浅色">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20"
+                                    height="20">
+                                    <circle cx="12" cy="12" r="5" />
+                                    <line x1="12" y1="1" x2="12" y2="3" />
+                                    <line x1="12" y1="21" x2="12" y2="23" />
+                                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                                    <line x1="1" y1="12" x2="3" y2="12" />
+                                    <line x1="21" y1="12" x2="23" y2="12" />
+                                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                                </svg>
+                            </button>
+                            <button class="theme-btn" data-theme="dark" title="深色">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20"
+                                    height="20">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="language">语言</span>
+                        <select id="languageSelect" class="select">
+                            <option value="zh">中文</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 data-i18n="preferences">偏好设置</h3>
+                    <div class="setting-item">
+                        <span data-i18n="defaultCurrency">默认币种</span>
+                        <select id="currencySelect" class="select">
+                            <option value="CNY">¥ 人民币 (CNY)</option>
+                            <option value="USD">$ 美元 (USD)</option>
+                            <option value="EUR">€ 欧元 (EUR)</option>
+                            <option value="JPY">¥ 日元 (JPY)</option>
+                            <option value="GBP">£ 英镑 (GBP)</option>
+                            <option value="HKD">$ 港币 (HKD)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="defaultPeriod">默认时间周期</span>
+                        <select id="periodSelect" class="select">
+                            <option value="week" data-i18n="week">周</option>
+                            <option value="month" data-i18n="month" selected>月</option>
+                            <option value="quarter" data-i18n="quarter">季</option>
+                            <option value="year" data-i18n="year">年</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="invertColors">红绿反转</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="invertColorsToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 data-i18n="storage">存储</h3>
+                    <div class="setting-item">
+                        <span data-i18n="dbPath">数据库位置</span>
+                        <div class="setting-control">
+                            <input type="text" id="dbPathInput" class="input db-path-input"
+                                placeholder="/Users/xxx/Library/Mobile Documents/com~apple~CloudDocs/OpenPercento/openpercento.db">
+                            <button id="btnApplyDbPath" class="btn btn-secondary" data-i18n="apply">应用</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="dbPathCurrent">当前路径</span>
+                        <span id="dbPathCurrent" class="setting-value muted">-</span>
+                    </div>
+                    <p class="muted" data-i18n="dbPathHint">将 openpercento.db 放入 iCloud Drive，可实现多端同步（每端需运行本地服务）。</p>
+                </div>
+
+                <div class="settings-section">
+                    <h3 data-i18n="about">关于</h3>
+                    <div class="about-info">
+                        <p><strong>OpenPercento</strong> v1.0.0</p>
+                        <p data-i18n="aboutDesc">极简余额记账，专注净资产管理</p>
+                        <p class="muted" data-i18n="privacyNote">所有数据仅存储在本地，无需登录，隐私优先</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 模态框 -->
+    <!-- 账户编辑模态框 -->
+    <div id="accountModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="accountModalTitle" data-i18n="addAccount">添加账户</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="accountForm" class="modal-body">
+                <input type="hidden" id="accountId">
+                <div class="form-group">
+                    <label data-i18n="accountName">账户名称</label>
+                    <input type="text" id="accountName" class="input" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="accountGroup">账户分组</label>
+                    <div id="accountGroupSelector" class="account-group-selector">
+                        <div class="type-selector account-group-primary">
+                            <button type="button" class="type-btn active" data-level="primary" data-group="current">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="12" y1="1" x2="12" y2="23" />
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                </svg>
+                                <span data-i18n="groupCurrent">流动资金</span>
+                            </button>
+                            <button type="button" class="type-btn" data-level="primary" data-group="fixed">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="10" rx="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                                <span data-i18n="groupFixed">固定资产</span>
+                            </button>
+                            <button type="button" class="type-btn" data-level="primary" data-group="receivable">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M20 6H9a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11V6z" />
+                                    <path d="M7 8H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3" />
+                                </svg>
+                                <span data-i18n="groupReceivable">应收款</span>
+                            </button>
+                            <button type="button" class="type-btn" data-level="primary" data-group="liability">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                </svg>
+                                <span data-i18n="groupLiability">负债</span>
+                            </button>
+                        </div>
+                        <div id="accountGroupSecondary" class="account-group-secondary"></div>
+                    </div>
+                    <input type="hidden" id="accountGroup" value="current/cash">
+                </div>
+                <div class="form-group hidden" id="accountLogoGroup">
+                    <label data-i18n="accountLogo">Logo</label>
+                    <div class="icon-picker">
+                        <select id="accountIcon" class="select"></select>
+                        <img id="accountIconPreview" class="icon-preview hidden" alt="">
+                    </div>
+                </div>
+                <div class="toggle-group">
+                    <span data-i18n="includeInNetWorth">计入净资产</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="includeInNetWorth" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="form-row hidden" id="creditCardFields">
+                    <div class="form-group">
+                        <label data-i18n="billingDay">出账日</label>
+                        <input type="number" id="billingDay" class="input" min="1" max="31" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="repaymentDay">还款日</label>
+                        <input type="number" id="repaymentDay" class="input" min="1" max="31" step="1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="currentBalance">当前余额</label>
+                    <input type="number" id="accountBalance" class="input" step="0.01" required>
+                    <span id="accountBalanceUnitHint" class="form-hint"></span>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="note">备注</label>
+                    <textarea id="accountNote" class="input textarea" rows="2"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="cancel">取消</button>
+                <button type="submit" form="accountForm" class="btn btn-primary" data-i18n="save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 余额更新模态框 -->
+    <div id="balanceModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="updateBalance">更新余额</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="balanceForm" class="modal-body">
+                <input type="hidden" id="balanceAccountId">
+                <div class="form-group">
+                    <label data-i18n="selectAccount">选择账户</label>
+                    <select id="balanceAccount" class="select" required></select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="previousBalance">原余额</label>
+                    <input type="text" id="previousBalance" class="input" readonly>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="newBalance">新余额</label>
+                    <input type="number" id="newBalance" class="input" step="0.01">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="balanceDeltaDirection">入账/出账</label>
+                        <select id="balanceDeltaDirection" class="select">
+                            <option value="in" data-i18n="income">入账</option>
+                            <option value="out" data-i18n="expense">出账</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="balanceDeltaAmount">变动金额</label>
+                        <input type="number" id="balanceDeltaAmount" class="input" step="0.01" min="0"
+                            placeholder="输入后自动计算新余额">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="changeReason">变动原因（可选）</label>
+                    <input type="text" id="changeReason" class="input" placeholder="如：工资、投资收益、转账等">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="changeDate">日期</label>
+                    <input type="date" id="changeDate" class="input" required>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="cancel">取消</button>
+                <button type="submit" form="balanceForm" class="btn btn-primary" data-i18n="confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 转账模态框 -->
+    <div id="transferModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="transfer">转账</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="transferForm" class="modal-body">
+                <div class="form-group">
+                    <label data-i18n="fromAccount">转出账户</label>
+                    <select id="fromAccount" class="select" required></select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="toAccount">转入账户</label>
+                    <select id="toAccount" class="select" required></select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="transferAmount">转账金额</label>
+                    <input type="number" id="transferAmount" class="input" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="transferNote">备注（可选）</label>
+                    <input type="text" id="transferNote" class="input">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="transferDate">日期</label>
+                    <input type="date" id="transferDate" class="input" required>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="cancel">取消</button>
+                <button type="submit" form="transferForm" class="btn btn-primary"
+                    data-i18n="confirmTransfer">确认转账</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 投资编辑模态框 -->
+    <div id="investmentModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="investmentModalTitle" data-i18n="addInvestment">添加投资</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="investmentForm" class="modal-body">
+                <input type="hidden" id="investmentId">
+                <div class="form-group">
+                    <label data-i18n="investmentType">投资类型</label>
+                    <div class="type-selector" id="investmentTypeSelector">
+                        <button type="button" class="type-btn" data-type="stock">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
+                            </svg>
+                            <span data-i18n="typeStock">股票</span>
+                        </button>
+                        <button type="button" class="type-btn active" data-type="fund">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="20" x2="12" y2="10" />
+                                <line x1="18" y1="20" x2="18" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="16" />
+                            </svg>
+                            <span data-i18n="typeFund">基金</span>
+                        </button>
+                        <button type="button" class="type-btn" data-type="crypto">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+                            </svg>
+                            <span data-i18n="typeCrypto">加密货币</span>
+                        </button>
+                        <button type="button" class="type-btn" data-type="wealth">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 1v22" />
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            <span data-i18n="typeWealth">理财</span>
+                        </button>
+                    </div>
+                    <input type="hidden" id="investmentType" value="fund">
+                </div>
+
+                <!-- 代码输入：最明显位置 -->
+                <div class="form-group form-group-highlight">
+                    <label data-i18n="symbolCode">代码/符号</label>
+                    <input type="text" id="symbolCode" class="input input-large" required
+                        placeholder="如：009272, 110011">
+                    <small class="form-hint" data-i18n="codeHint">输入后将自动获取名称和价格</small>
+                </div>
+
+                <!-- 名称和成本价：显示框 + 编辑按钮 -->
+                <div class="form-group">
+                    <label data-i18n="symbolName">标的名称</label>
+                    <div class="display-field">
+                        <span id="symbolNameDisplay" class="display-value">未获取</span>
+                        <button type="button" class="btn-icon" id="btnEditName" title="编辑">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                        <input type="text" id="symbolName" class="input hidden" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="costPrice">成本价</label>
+                    <div class="display-field">
+                        <span id="costPriceDisplay" class="display-value">--</span>
+                        <button type="button" class="btn-icon" id="btnEditCost" title="编辑">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                        <input type="number" id="costPrice" class="input hidden" step="0.0001" min="0" required>
+                    </div>
+                </div>
+
+                <!-- 购买日期 -->
+                <div class="form-group">
+                    <label data-i18n="purchaseDate">购买日期</label>
+                    <input type="date" id="purchaseDate" class="input">
+                </div>
+
+                <div class="form-row hidden" id="wealthFields">
+                    <div class="form-group">
+                        <label data-i18n="wealthProductType">产品类型</label>
+                        <select id="wealthProductType" class="input">
+                            <option value="regular" data-i18n="wealthRegular">定期</option>
+                            <option value="irregular" data-i18n="wealthIrregular">非定期</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="annualInterestRate">预估年化(%)</label>
+                        <input type="number" id="annualInterestRate" class="input" step="0.01" min="0"
+                            placeholder="2.50">
+                    </div>
+                </div>
+                <div class="form-group hidden" id="wealthMaturityGroup">
+                    <label data-i18n="wealthMaturityDate">到期时间</label>
+                    <input type="date" id="wealthMaturityDate" class="input">
+                </div>
+                <div class="form-group hidden" id="wealthPrincipalGroup">
+                    <label data-i18n="wealthPrincipal">本金</label>
+                    <input type="number" id="wealthPrincipal" class="input" step="0.01" min="0" placeholder="10000">
+                </div>
+                <div class="form-group hidden" id="wealthCurrentAmountGroup">
+                    <label data-i18n="wealthCurrentAmount">当前金额</label>
+                    <input type="number" id="wealthCurrentAmount" class="input" step="0.01" min="0"
+                        placeholder="10250.00">
+                </div>
+
+                <!-- 持仓数量和持有金额：双向计算 -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label data-i18n="quantity">持仓数量</label>
+                        <input type="number" id="investmentQuantity" class="input" step="0.0001" min="0"
+                            placeholder="可由金额计算">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="holdingAmount">持有金额</label>
+                        <input type="number" id="holdingAmount" class="input" step="0.01" min="0" placeholder="可由数量计算">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="investmentNote">备注</label>
+                    <textarea id="investmentNote" class="input textarea" rows="2"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="cancel">取消</button>
+                <button type="button" id="btnManageInvestmentDca" class="btn btn-secondary" data-i18n="dca">定投</button>
+                <button type="submit" form="investmentForm" class="btn btn-primary" data-i18n="save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 账户详情模态框 -->
+    <div id="accountDetailModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="accountDetailTitle">账户详情</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-summary" id="accountDetailSummary"></div>
+                <div class="detail-section">
+                    <h4 data-i18n="balanceHistory">余额变动记录</h4>
+                    <div class="history-list" id="accountHistoryList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnManageAccountRecurring" class="btn btn-secondary"
+                    data-i18n="recurring">周期记</button>
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="close">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="recurringModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="recurringModalTitle" data-i18n="recurring">周期记</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-section">
+                    <h4 data-i18n="existingSchedules">已设置</h4>
+                    <div id="recurringList" class="history-list"></div>
+                </div>
+
+                <div class="detail-section">
+                    <h4 data-i18n="newSchedule">新增</h4>
+                    <form id="recurringForm">
+                        <input type="hidden" id="recurringKind">
+                        <input type="hidden" id="recurringAccountId">
+                        <input type="hidden" id="recurringInvestmentId">
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label data-i18n="scheduleAction">类型</label>
+                                <select id="recurringAction" class="select">
+                                    <option value="income" data-i18n="scheduleIncome">入账</option>
+                                    <option value="transfer" data-i18n="scheduleTransfer">转账</option>
+                                    <option value="dca" data-i18n="dca">定投</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="scheduleFrequency">周期</label>
+                                <select id="recurringFrequency" class="select">
+                                    <option value="daily" data-i18n="freqDaily">每日</option>
+                                    <option value="weekly" data-i18n="freqWeekly">每周</option>
+                                    <option value="monthly" data-i18n="freqMonthly">每月</option>
+                                    <option value="yearly" data-i18n="freqYearly">每年</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group" id="recurringWeekdayGroup">
+                                <label data-i18n="weekday">周几</label>
+                                <select id="recurringWeekday" class="select">
+                                    <option value="1" data-i18n="weekdayMon">周一</option>
+                                    <option value="2" data-i18n="weekdayTue">周二</option>
+                                    <option value="3" data-i18n="weekdayWed">周三</option>
+                                    <option value="4" data-i18n="weekdayThu">周四</option>
+                                    <option value="5" data-i18n="weekdayFri">周五</option>
+                                    <option value="6" data-i18n="weekdaySat">周六</option>
+                                    <option value="0" data-i18n="weekdaySun">周日</option>
+                                </select>
+                            </div>
+                            <div class="form-group hidden" id="recurringMonthdayGroup">
+                                <label data-i18n="monthDay">第几日</label>
+                                <input type="number" id="recurringMonthDay" class="input" min="1" max="31" value="1">
+                            </div>
+                            <div class="form-group hidden" id="recurringYeardayGroup">
+                                <label data-i18n="yearDay">一年第几日</label>
+                                <input type="number" id="recurringYearDay" class="input" min="1" max="366" value="1">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group hidden" id="recurringFromAccountGroup">
+                                <label data-i18n="fromAccount">转出账户</label>
+                                <select id="recurringFromAccount" class="select"></select>
+                            </div>
+                            <div class="form-group hidden" id="recurringToAccountGroup">
+                                <label data-i18n="toAccount">转入账户</label>
+                                <select id="recurringToAccount" class="select"></select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label data-i18n="amount">金额</label>
+                                <input type="number" id="recurringAmount" class="input" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="note">备注</label>
+                                <input type="text" id="recurringNote" class="input">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="cancel">取消</button>
+                <button type="button" id="btnSaveRecurring" class="btn btn-primary" data-i18n="add">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认对话框 -->
+    <div id="confirmModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 id="confirmTitle" data-i18n="confirm">确认</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="cancel">取消</button>
+                <button type="button" id="confirmOk" class="btn btn-danger" data-i18n="confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- 加载骨架屏 -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div id="dragTrashBin" class="drag-trash-bin hidden" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+            <polyline points="3,6 5,6 21,6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/chart.min.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/accounts.js"></script>
+    <script src="js/investments.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

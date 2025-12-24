@@ -1,0 +1,52 @@
+/* ========================================
+   Percento - 深色主题
+   ======================================== */
+
+[data-theme="dark"] {
+    --color-bg-primary: #1A1B1E;
+    --color-bg-secondary: #25262B;
+    --color-bg-card: #2C2E33;
+    --color-accent: #5D8FD9;
+    --color-accent-light: #7BA8E8;
+    --color-success: #6DBF8B;
+    --color-warning: #E5A862;
+    --color-danger: #E57373;
+    --color-text-primary: #E1E2E5;
+    --color-text-secondary: #A1A2A5;
+    --color-text-muted: #6B6C70;
+    --color-border: #3E4045;
+    --color-divider: #333538;
+}
+
+[data-theme="dark"] .stat-card.net-worth-card {
+    background-color: var(--color-accent);
+}
+
+[data-theme="dark"] .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .loading-overlay {
+    background-color: rgba(26, 27, 30, 0.9);
+}
+
+[data-theme="dark"] .toast {
+    background-color: var(--color-bg-card);
+    color: var(--color-text-primary);
+}
+
+[data-theme="dark"] .input {
+    background-color: var(--color-bg-secondary);
+}
+
+[data-theme="dark"] .input[readonly] {
+    background-color: var(--color-bg-primary);
+}
+
+[data-theme="dark"] .theme-btn.active {
+    background-color: var(--color-bg-primary);
+}
+
+[data-theme="dark"] .account-action-btn.danger:hover {
+    background-color: rgba(229, 115, 115, 0.2);
+}

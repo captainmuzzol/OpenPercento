@@ -1,0 +1,22 @@
+{
+    "name": "Percento - 极简记账",
+    "short_name": "Percento",
+    "description": "极简余额记账，专注净资产管理，隐私优先",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F8F9FA",
+    "theme_color": "#E0E8F0",
+    "icons": [
+        {
+            "src": "icons/OpenPercento.PNG",
+            "sizes": "any",
+            "type": "image/png"
+        }
+    ],
+    "lang": "zh-CN",
+    "categories": [
+        "finance",
+        "productivity"
+    ],
+    "orientation": "any"
+}

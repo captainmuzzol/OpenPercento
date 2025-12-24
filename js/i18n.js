@@ -1,0 +1,503 @@
+/**
+ * OpenPercento - 国际化模块
+ * 支持中文/英文切换
+ */
+
+const i18n = {
+    currentLang: 'zh',
+
+    translations: {
+        zh: {
+            // 导航
+            dashboard: '总览',
+            accounts: '账户',
+            investments: '投资',
+            charts: '图表',
+            dataManagement: '数据',
+            settings: '设置',
+
+            // 通用
+            all: '全部',
+            amount: '金额',
+            save: '保存',
+            cancel: '取消',
+            confirm: '确认',
+            close: '关闭',
+            delete: '删除',
+            edit: '编辑',
+            add: '添加',
+            viewAll: '查看全部',
+            loading: '加载中...',
+
+            // 账户
+            addAccount: '添加账户',
+            editAccount: '编辑账户',
+            accountName: '账户名称',
+            accountGroup: '账户分组',
+            currentBalance: '当前余额',
+            note: '备注',
+            accountLogo: 'Logo',
+            billingDay: '出账日',
+            repaymentDay: '还款日',
+            netWorth: '净资产',
+            totalAssets: '总资产',
+            totalLiabilities: '总负债',
+            investmentValue: '投资市值',
+            recentAccounts: '账户概览',
+            netWorthTrend: '净资产趋势',
+            updateBalance: '更新余额',
+            selectAccount: '选择账户',
+            previousBalance: '原余额',
+            newBalance: '新余额',
+            balanceDeltaDirection: '入账/出账',
+            balanceDeltaAmount: '变动金额',
+            income: '入账',
+            expense: '出账',
+            includeInNetWorth: '计入净资产',
+            changeReason: '变动原因（可选）',
+            changeDate: '日期',
+            balanceHistory: '余额变动记录',
+
+            // 账户分组
+            groupCash: '现金',
+            groupBank: '银行卡',
+            groupInvestment: '投资',
+            groupCrypto: '加密货币',
+            groupLiability: '负债',
+            groupCurrent: '流动资金',
+            groupFixed: '固定资产',
+            groupReceivable: '应收款',
+            subCash: '现金',
+            subWeChat: '微信',
+            subAlipay: '支付宝',
+            subAppStore: 'AppStore',
+            subSavingsCard: '储蓄卡',
+            subOther: '其它',
+            subHouse: '房产',
+            subCar: '汽车',
+            subOtherFixed: '其它固定资产',
+            subLend: '借出',
+            subOtherReceivable: '其它应收款',
+            subCreditCard: '信用卡',
+            subLoan: '贷款',
+            subPayable: '应付款',
+            subOtherLiability: '其它负债',
+
+            // 转账
+            transfer: '转账',
+            fromAccount: '转出账户',
+            toAccount: '转入账户',
+            transferAmount: '转账金额',
+            transferNote: '备注（可选）',
+            transferDate: '日期',
+            confirmTransfer: '确认转账',
+
+            // 投资
+            addInvestment: '添加投资',
+            editInvestment: '编辑投资',
+            investmentType: '投资类型',
+            typeStock: '股票',
+            typeFund: '基金',
+            typeCrypto: '加密货币',
+            typeWealth: '理财',
+            wealthProductType: '产品类型',
+            wealthRegular: '定期',
+            wealthIrregular: '非定期',
+            annualInterestRate: '预估年化(%)',
+            wealthPrincipal: '本金',
+            wealthCurrentAmount: '当前金额',
+            wealthMaturityDate: '到期时间',
+            reminders: '提醒',
+            noReminders: '暂无提醒',
+            wealthMaturityReminderWeek: '理财到期前一周',
+            wealthMaturityReminderDay: '理财到期前一天',
+            creditCardRepayReminderWeek: '信用卡还款前一周',
+            creditCardRepayReminderDay: '信用卡还款前一天',
+            symbolName: '标的名称',
+            symbolCode: '代码/符号',
+            quantity: '持仓数量',
+            purchaseDate: '购买日期',
+            holdingAmount: '持有金额',
+            codeHint: '输入后将自动获取名称和价格',
+            costPrice: '成本价',
+            currentPrice: '当前价格（可手动输入或自动获取）',
+            fetchPrice: '获取价格',
+            investmentNote: '备注',
+            totalMarketValue: '总市值',
+            totalCost: '总成本',
+            totalProfitLoss: '总盈亏',
+            profitRate: '收益率',
+            refreshPrices: '刷新价格',
+
+            // 图表
+            assetAllocation: '净资产配比',
+            financialChanges: '财务变动',
+            week: '周',
+            month: '月',
+            quarter: '季',
+            year: '年',
+            allTime: '全部',
+            exportChart: '导出图表',
+
+            // 数据管理
+            exportImport: '导入/导出',
+            exportCSV: '导出CSV',
+            importCSV: '导入CSV',
+            webdavSync: 'WebDAV 同步',
+            webdavUrl: 'WebDAV 地址',
+            webdavUser: '用户名',
+            webdavPass: '密码',
+            syncNow: '立即同步',
+            testConnection: '测试连接',
+            passwordLock: '密码锁',
+            enablePassword: '启用密码锁',
+            setPassword: '设置密码 (4位以上)',
+            confirmPassword: '确认密码',
+            savePassword: '保存密码',
+            enterPassword: '输入密码',
+            dangerZone: '危险操作',
+            clearAllData: '清除所有数据',
+
+            // 设置
+            appearance: '外观',
+            theme: '主题',
+            language: '语言',
+            preferences: '偏好设置',
+            invertColors: '红绿反转',
+            storage: '存储',
+            dbPath: '数据库位置',
+            dbPathCurrent: '当前路径',
+            dbPathHint: '将 openpercento.db 放入 iCloud Drive，可实现多端同步（每端需运行本地服务）。',
+            apply: '应用',
+            recurring: '周期记',
+            dca: '定投',
+            existingSchedules: '已设置',
+            newSchedule: '新增',
+            scheduleAction: '类型',
+            scheduleIncome: '入账',
+            scheduleTransfer: '转账',
+            scheduleFrequency: '周期',
+            freqDaily: '每日',
+            freqWeekly: '每周',
+            freqMonthly: '每月',
+            freqYearly: '每年',
+            weekday: '周几',
+            weekdayMon: '周一',
+            weekdayTue: '周二',
+            weekdayWed: '周三',
+            weekdayThu: '周四',
+            weekdayFri: '周五',
+            weekdaySat: '周六',
+            weekdaySun: '周日',
+            monthDay: '第几日',
+            yearDay: '一年第几日',
+            noSchedules: '暂无设置',
+            nextRun: '下次执行',
+            enabled: '启用',
+            disabled: '停用',
+            scheduleSaved: '已添加',
+            scheduleDeleted: '已删除',
+            scheduleRunSkipped: '定投执行失败：无法计算买入价格',
+            defaultCurrency: '默认币种',
+            defaultPeriod: '默认时间周期',
+            about: '关于',
+            aboutDesc: '极简余额记账，专注净资产管理',
+            privacyNote: '所有数据仅存储在本地，无需登录，隐私优先',
+
+            // 提示消息
+            accountSaved: '账户已保存',
+            accountDeleted: '账户已删除',
+            balanceUpdated: '余额已更新',
+            transferCompleted: '转账完成',
+            investmentSaved: '投资已保存',
+            investmentDeleted: '投资已删除',
+            pricesRefreshed: '价格已刷新',
+            dataExported: '数据已导出',
+            dataImported: '数据已导入',
+            syncSuccess: '同步成功',
+            syncFailed: '同步失败',
+            connectionSuccess: '连接成功',
+            connectionFailed: '连接失败',
+            passwordSet: '密码已设置',
+            passwordMismatch: '两次密码不一致',
+            passwordIncorrect: '密码错误',
+            dataCleared: '数据已清除',
+            confirmClearData: '确定要清除所有数据吗？此操作不可恢复！',
+            confirmDeleteAccount: '确定要删除此账户吗？',
+            confirmDeleteInvestment: '确定要删除此投资吗？',
+            fetchPriceError: '获取价格失败，请手动输入',
+        },
+
+        en: {
+            // Navigation
+            dashboard: 'Dashboard',
+            accounts: 'Accounts',
+            investments: 'Investments',
+            charts: 'Charts',
+            dataManagement: 'Data',
+            settings: 'Settings',
+
+            // Common
+            all: 'All',
+            amount: 'Amount',
+            save: 'Save',
+            cancel: 'Cancel',
+            confirm: 'Confirm',
+            close: 'Close',
+            delete: 'Delete',
+            edit: 'Edit',
+            add: 'Add',
+            viewAll: 'View All',
+            loading: 'Loading...',
+
+            // Accounts
+            addAccount: 'Add Account',
+            editAccount: 'Edit Account',
+            accountName: 'Account Name',
+            accountGroup: 'Account Group',
+            currentBalance: 'Current Balance',
+            note: 'Note',
+            accountLogo: 'Logo',
+            billingDay: 'Billing Day',
+            repaymentDay: 'Repayment Day',
+            netWorth: 'Net Worth',
+            totalAssets: 'Total Assets',
+            totalLiabilities: 'Total Liabilities',
+            investmentValue: 'Investment Value',
+            recentAccounts: 'Account Overview',
+            netWorthTrend: 'Net Worth Trend',
+            updateBalance: 'Update Balance',
+            selectAccount: 'Select Account',
+            previousBalance: 'Previous Balance',
+            newBalance: 'New Balance',
+            balanceDeltaDirection: 'In/Out',
+            balanceDeltaAmount: 'Change Amount',
+            income: 'Income',
+            expense: 'Expense',
+            includeInNetWorth: 'Include in Net Worth',
+            changeReason: 'Reason (Optional)',
+            changeDate: 'Date',
+            balanceHistory: 'Balance History',
+
+            // Account Groups
+            groupCash: 'Cash',
+            groupBank: 'Bank',
+            groupInvestment: 'Investment',
+            groupCrypto: 'Crypto',
+            groupLiability: 'Liability',
+            groupCurrent: 'Current Funds',
+            groupFixed: 'Fixed Assets',
+            groupReceivable: 'Receivables',
+            subCash: 'Cash',
+            subWeChat: 'WeChat',
+            subAlipay: 'Alipay',
+            subAppStore: 'App Store',
+            subSavingsCard: 'Debit Card',
+            subOther: 'Other',
+            subHouse: 'Real Estate',
+            subCar: 'Car',
+            subOtherFixed: 'Other Fixed',
+            subLend: 'Lend Out',
+            subOtherReceivable: 'Other Receivable',
+            subCreditCard: 'Credit Card',
+            subLoan: 'Loan',
+            subPayable: 'Payable',
+            subOtherLiability: 'Other Liability',
+
+            // Transfer
+            transfer: 'Transfer',
+            fromAccount: 'From Account',
+            toAccount: 'To Account',
+            transferAmount: 'Amount',
+            transferNote: 'Note (Optional)',
+            transferDate: 'Date',
+            confirmTransfer: 'Confirm Transfer',
+
+            // Investments
+            addInvestment: 'Add Investment',
+            editInvestment: 'Edit Investment',
+            investmentType: 'Type',
+            typeStock: 'Stock',
+            typeFund: 'Fund',
+            typeCrypto: 'Crypto',
+            typeWealth: 'Wealth',
+            wealthProductType: 'Product',
+            wealthRegular: 'Fixed term',
+            wealthIrregular: 'Non-fixed',
+            annualInterestRate: 'Est. APR (%)',
+            wealthPrincipal: 'Principal',
+            wealthCurrentAmount: 'Current Amount',
+            wealthMaturityDate: 'Maturity Date',
+            reminders: 'Reminders',
+            noReminders: 'No reminders',
+            wealthMaturityReminderWeek: 'Wealth matures in 1 week',
+            wealthMaturityReminderDay: 'Wealth matures tomorrow',
+            creditCardRepayReminderWeek: 'Credit card payment in 1 week',
+            creditCardRepayReminderDay: 'Credit card payment tomorrow',
+            symbolName: 'Name',
+            symbolCode: 'Symbol/Code',
+            quantity: 'Quantity',
+            purchaseDate: 'Purchase Date',
+            holdingAmount: 'Holding Amount',
+            codeHint: 'Auto-fetch name and price after input',
+            costPrice: 'Cost Price',
+            currentPrice: 'Current Price (Manual or Auto)',
+            fetchPrice: 'Fetch Price',
+            investmentNote: 'Note',
+            totalMarketValue: 'Market Value',
+            totalCost: 'Total Cost',
+            totalProfitLoss: 'Profit/Loss',
+            profitRate: 'Return Rate',
+            refreshPrices: 'Refresh Prices',
+
+            // Charts
+            assetAllocation: 'Net Worth Allocation',
+            financialChanges: 'Financial Changes',
+            week: 'Week',
+            month: 'Month',
+            quarter: 'Quarter',
+            year: 'Year',
+            allTime: 'All',
+            exportChart: 'Export Chart',
+
+            // Data Management
+            exportImport: 'Import/Export',
+            exportCSV: 'Export CSV',
+            importCSV: 'Import CSV',
+            webdavSync: 'WebDAV Sync',
+            webdavUrl: 'WebDAV URL',
+            webdavUser: 'Username',
+            webdavPass: 'Password',
+            syncNow: 'Sync Now',
+            testConnection: 'Test Connection',
+            passwordLock: 'Password Lock',
+            enablePassword: 'Enable Password',
+            setPassword: 'Set Password (4+ digits)',
+            confirmPassword: 'Confirm Password',
+            savePassword: 'Save Password',
+            enterPassword: 'Enter Password',
+            dangerZone: 'Danger Zone',
+            clearAllData: 'Clear All Data',
+
+            // Settings
+            appearance: 'Appearance',
+            theme: 'Theme',
+            language: 'Language',
+            preferences: 'Preferences',
+            invertColors: 'Invert Colors',
+            storage: 'Storage',
+            dbPath: 'DB Path',
+            dbPathCurrent: 'Current Path',
+            dbPathHint: 'Put openpercento.db in iCloud Drive to sync across devices (local server required on each device).',
+            apply: 'Apply',
+            recurring: 'Recurring',
+            dca: 'DCA',
+            existingSchedules: 'Existing',
+            newSchedule: 'New',
+            scheduleAction: 'Action',
+            scheduleIncome: 'Income',
+            scheduleTransfer: 'Transfer',
+            scheduleFrequency: 'Frequency',
+            freqDaily: 'Daily',
+            freqWeekly: 'Weekly',
+            freqMonthly: 'Monthly',
+            freqYearly: 'Yearly',
+            weekday: 'Weekday',
+            weekdayMon: 'Mon',
+            weekdayTue: 'Tue',
+            weekdayWed: 'Wed',
+            weekdayThu: 'Thu',
+            weekdayFri: 'Fri',
+            weekdaySat: 'Sat',
+            weekdaySun: 'Sun',
+            monthDay: 'Day of month',
+            yearDay: 'Day of year',
+            noSchedules: 'No schedules',
+            nextRun: 'Next run',
+            enabled: 'Enabled',
+            disabled: 'Disabled',
+            scheduleSaved: 'Added',
+            scheduleDeleted: 'Deleted',
+            scheduleRunSkipped: 'DCA skipped: cannot determine buy price',
+            defaultCurrency: 'Default Currency',
+            defaultPeriod: 'Default Period',
+            about: 'About',
+            aboutDesc: 'Minimal balance tracking, focused on net worth',
+            privacyNote: 'All data stored locally. No login required. Privacy first.',
+
+            // Messages
+            accountSaved: 'Account saved',
+            accountDeleted: 'Account deleted',
+            balanceUpdated: 'Balance updated',
+            transferCompleted: 'Transfer completed',
+            investmentSaved: 'Investment saved',
+            investmentDeleted: 'Investment deleted',
+            pricesRefreshed: 'Prices refreshed',
+            dataExported: 'Data exported',
+            dataImported: 'Data imported',
+            syncSuccess: 'Sync successful',
+            syncFailed: 'Sync failed',
+            connectionSuccess: 'Connection successful',
+            connectionFailed: 'Connection failed',
+            passwordSet: 'Password set',
+            passwordMismatch: 'Passwords do not match',
+            passwordIncorrect: 'Incorrect password',
+            dataCleared: 'Data cleared',
+            confirmClearData: 'Are you sure you want to clear all data? This cannot be undone!',
+            confirmDeleteAccount: 'Are you sure you want to delete this account?',
+            confirmDeleteInvestment: 'Are you sure you want to delete this investment?',
+            fetchPriceError: 'Failed to fetch price, please enter manually',
+        }
+    },
+
+    /**
+     * 初始化语言
+     */
+    init() {
+        const savedLang = localStorage.getItem('percento_lang') || 'zh';
+        this.setLanguage(savedLang);
+    },
+
+    /**
+     * 设置语言
+     * @param {string} lang - 语言代码 (zh/en)
+     */
+    setLanguage(lang) {
+        if (!this.translations[lang]) {
+            lang = 'zh';
+        }
+        this.currentLang = lang;
+        localStorage.setItem('percento_lang', lang);
+        this.updateUI();
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    },
+
+    /**
+     * 获取翻译文本
+     * @param {string} key - 翻译键
+     * @returns {string} 翻译后的文本
+     */
+    t(key) {
+        return this.translations[this.currentLang][key] || key;
+    },
+
+    /**
+     * 更新页面UI文本
+     */
+    updateUI() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            const text = this.t(key);
+            if (el.tagName === 'INPUT' && el.type !== 'text') {
+                el.value = text;
+            } else if (el.hasAttribute('placeholder')) {
+                el.placeholder = text;
+            } else {
+                el.textContent = text;
+            }
+        });
+    }
+};
+
+// 导出
+window.i18n = i18n;
