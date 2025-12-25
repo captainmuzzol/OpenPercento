@@ -25,8 +25,9 @@
 OpenPercento 是一款专注于隐私保护和极简体验的个人财务管理应用。灵感来自Percento APP，并在此基础上优化功能。采用本地优先的设计理念，所有数据默认存储在本地，确保您的财务信息安全可控。支持多账户管理、投资追踪、数据可视化等核心功能，帮助您轻松掌握个人财务状况。
 
 <p align="center">
-  <img src="icons/示例.png" alt="OpenPercento 应用示例" width="800">
+  <img src="icons/预览图.png" alt="OpenPercento 应用示例" width="800">
 </p>
+
 
 ## 功能特性
 
@@ -134,7 +135,7 @@ OpenPercento 是一款专注于隐私保护和极简体验的个人财务管理�
 ## 待办：
 
 1. 优化更新余额UI
- 
+
 ## 已解决：
 1. 修复刷新价格时报错的问题
 2. 关于投资-理财部分有些问题（非定期理财累计金额计算为 0）
@@ -153,4 +154,3 @@ Copyright (c) 2026 木只
 <p align="center">
   Made with ❤️ by 木只
 </p>
-
