@@ -126,6 +126,7 @@ const i18n = {
             totalMarketValue: '总市值',
             totalCost: '总成本',
             totalProfitLoss: '总盈亏',
+            yesterdayProfitLoss: '昨日盈亏',
             profitRate: '收益率',
             refreshPrices: '刷新价格',
 
@@ -351,6 +352,7 @@ const i18n = {
             totalMarketValue: 'Market Value',
             totalCost: 'Total Cost',
             totalProfitLoss: 'Profit/Loss',
+            yesterdayProfitLoss: "Yesterday's P/L",
             profitRate: 'Return Rate',
             refreshPrices: 'Refresh Prices',
 

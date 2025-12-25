@@ -1545,7 +1545,17 @@ const Accounts = {
                 ? (days === 0 ? `今天还款 · ${repaymentDate}` : `${days}天后还款 · ${repaymentDate}`)
                 : (days === 0 ? `Payment today · ${repaymentDate}` : `Payment in ${days} day(s) · ${repaymentDate}`);
 
-            reminders.push({ kind: 'credit_card', days, date: repaymentDate, title, meta });
+            reminders.push({
+                kind: 'credit_card',
+                days,
+                date: repaymentDate,
+                title,
+                meta,
+                accountId: Number(account.id),
+                accountName: String(account.name || ''),
+                icon: account.icon || this.getDefaultIconForGroup(account.group),
+                amountDue: Math.abs(balance)
+            });
         }
 
         return reminders;

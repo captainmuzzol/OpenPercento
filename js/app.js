@@ -1566,6 +1566,8 @@ const App = {
         const container = document.getElementById('dashboardReminders');
         if (!container) return;
 
+        const section = container.closest('.dashboard-section');
+
         const wealthReminders = typeof Investments?.getWealthReminders === 'function'
             ? await Investments.getWealthReminders()
             : [];
@@ -1578,25 +1580,108 @@ const App = {
         reminders.sort((a, b) => (Number(a.days) - Number(b.days)) || String(a.date).localeCompare(String(b.date)) || String(a.title).localeCompare(String(b.title)));
 
         if (reminders.length === 0) {
-            container.innerHTML = `<div class="empty-state"><p class="muted">${i18n.t('noReminders')}</p></div>`;
+            container.innerHTML = '';
+            section?.classList.add('hidden');
             return;
         }
 
+        section?.classList.remove('hidden');
         container.innerHTML = '';
+
+        const getLevel = (days) => {
+            const n = Number(days);
+            if (!Number.isFinite(n)) return 'normal';
+            if (n <= 1) return 'urgent';
+            if (n <= 3) return 'warn';
+            return 'normal';
+        };
+
+        const wealthIcon = (() => {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#4A6FA5"/><path d="M20 41c8-3 16-3 24 0" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M22 28h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="24" cy="24" r="3" fill="#fff"/><circle cx="40" cy="24" r="3" fill="#fff"/></svg>`;
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        })();
+
+        const toIconSrc = (icon) => {
+            const raw = String(icon || '');
+            if (!raw) return '';
+            return raw.startsWith('data:') ? raw : `./icons/${encodeURIComponent(raw)}`;
+        };
+
         for (const rem of reminders) {
+            const days = Number(rem.days);
+            const kind = String(rem.kind || '');
+            const level = getLevel(days);
+
             const item = document.createElement('div');
-            item.className = 'reminder-item';
+            item.className = `reminder-item ${level}`;
+
+            const left = document.createElement('div');
+            left.className = 'reminder-left';
+
+            const logo = document.createElement('img');
+            logo.className = 'reminder-logo';
+            logo.alt = '';
+            if (kind === 'credit_card') {
+                logo.src = toIconSrc(rem.icon);
+            } else {
+                logo.src = wealthIcon;
+            }
+            left.appendChild(logo);
+
+            const content = document.createElement('div');
+            content.className = 'reminder-content';
 
             const title = document.createElement('div');
             title.className = 'reminder-title';
-            title.textContent = String(rem.title || '');
+            title.textContent = kind === 'credit_card'
+                ? (rem.accountName || rem.title || '')
+                : (rem.investmentName || rem.title || '');
+
+            const sub = document.createElement('div');
+            sub.className = 'reminder-sub';
 
             const meta = document.createElement('div');
             meta.className = 'reminder-meta';
-            meta.textContent = String(rem.meta || '');
+            meta.textContent = String(rem.date || '');
+            sub.appendChild(meta);
 
-            item.appendChild(title);
-            item.appendChild(meta);
+            if (kind === 'credit_card' && Number.isFinite(Number(rem.amountDue))) {
+                const amount = document.createElement('div');
+                amount.className = 'reminder-amount';
+                amount.textContent = i18n.currentLang === 'zh'
+                    ? `需还 ${App.formatCurrency(Number(rem.amountDue))}`
+                    : `Due ${App.formatCurrency(Number(rem.amountDue))}`;
+                sub.appendChild(amount);
+            }
+
+            content.appendChild(title);
+            content.appendChild(sub);
+
+            const right = document.createElement('div');
+            right.className = 'reminder-right';
+
+            const badge = document.createElement('div');
+            badge.className = 'reminder-badge';
+
+            const badgeDays = document.createElement('div');
+            badgeDays.className = 'reminder-badge-days';
+            badgeDays.textContent = days === 0
+                ? (i18n.currentLang === 'zh' ? '今天' : 'Today')
+                : (i18n.currentLang === 'zh' ? `${days}天` : `${days}d`);
+
+            const badgeLabel = document.createElement('div');
+            badgeLabel.className = 'reminder-badge-label';
+            badgeLabel.textContent = kind === 'credit_card'
+                ? (i18n.currentLang === 'zh' ? '还款' : 'Payment')
+                : (i18n.currentLang === 'zh' ? '到期' : 'Maturity');
+
+            badge.appendChild(badgeDays);
+            badge.appendChild(badgeLabel);
+            right.appendChild(badge);
+
+            item.appendChild(left);
+            item.appendChild(content);
+            item.appendChild(right);
             container.appendChild(item);
         }
     },

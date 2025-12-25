@@ -383,11 +383,26 @@ const Investments = {
 
         let totalMarketValue = 0;
         let totalCost = 0;
+        let yesterdayProfit = 0;
+        let yesterdayProfitCount = 0;
 
-        investments.forEach(inv => {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        for (const inv of (investments || [])) {
             totalMarketValue += inv.quantity * inv.currentPrice;
             totalCost += inv.quantity * inv.costPrice;
-        });
+            try {
+                const h = await DB.getPriceHistoryByDate(Number(inv.id), yesterdayStr);
+                const prev = Number(h?.price);
+                if (Number.isFinite(prev)) {
+                    yesterdayProfit += (Number(inv.quantity || 0) * (Number(inv.currentPrice || 0) - prev));
+                    yesterdayProfitCount++;
+                }
+            } catch { }
+        }
 
         const totalProfit = totalMarketValue - totalCost;
         const profitRate = totalCost > 0 ? (totalProfit / totalCost * 100) : 0;
@@ -402,6 +417,17 @@ const Investments = {
         const rateEl = document.getElementById('profitRate');
         rateEl.textContent = (profitRate >= 0 ? '+' : '') + profitRate.toFixed(2) + '%';
         rateEl.className = 'value ' + (profitRate >= 0 ? 'positive' : 'negative');
+
+        const yEl = document.getElementById('yesterdayProfitLoss');
+        if (yEl) {
+            if (yesterdayProfitCount <= 0) {
+                yEl.textContent = '--';
+                yEl.className = 'value muted';
+            } else {
+                yEl.textContent = (yesterdayProfit >= 0 ? '+' : '') + App.formatCurrency(yesterdayProfit);
+                yEl.className = 'value ' + (yesterdayProfit >= 0 ? 'positive' : 'negative');
+            }
+        }
 
         // 更新仪表盘投资数据
         document.getElementById('dashboardInvestments').textContent = App.formatCurrency(totalMarketValue);
@@ -919,7 +945,16 @@ const Investments = {
                 ? (days === 0 ? `今天到期 · ${maturity}` : `${days}天后到期 · ${maturity}`)
                 : (days === 0 ? `Matures today · ${maturity}` : `Matures in ${days} day(s) · ${maturity}`);
 
-            reminders.push({ kind: 'wealth', days, date: maturity, title, meta });
+            reminders.push({
+                kind: 'wealth',
+                days,
+                date: maturity,
+                title,
+                meta,
+                investmentId: Number(inv.id),
+                investmentName: String(inv.name || ''),
+                currentAmount: Number(inv.quantity || 0) * Number(inv.currentPrice || 0)
+            });
         }
 
         return reminders;
