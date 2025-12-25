@@ -5,6 +5,7 @@
 
 const Investments = {
     currentType: 'all',
+    sortDirection: 'desc',
 
     // API 配置
     apis: {
@@ -51,6 +52,7 @@ const Investments = {
         await this.accrueWealthInvestments(today);
         await this.renderInvestmentList();
         await this.updateSummary();
+        this.updateSortButtonUI();
 
         // 初始化定时价格更新
         this.initPriceUpdateTimer();
@@ -63,6 +65,12 @@ const Investments = {
         // 添加投资按钮
         document.getElementById('btnAddInvestment').addEventListener('click', () => {
             this.openInvestmentModal();
+        });
+
+        document.getElementById('btnSortInvestments')?.addEventListener('click', () => {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            this.updateSortButtonUI();
+            this.renderInvestmentList();
         });
 
         // 刷新价格按钮
@@ -116,6 +124,13 @@ const Investments = {
             investments = investments.filter(inv => inv.type === this.currentType);
         }
 
+        investments.sort((a, b) => {
+            const av = Number(a?.quantity || 0) * Number(a?.currentPrice || 0);
+            const bv = Number(b?.quantity || 0) * Number(b?.currentPrice || 0);
+            if (av === bv) return (Number(a?.id || 0) - Number(b?.id || 0));
+            return this.sortDirection === 'asc' ? (av - bv) : (bv - av);
+        });
+
         if (investments.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -148,6 +163,16 @@ const Investments = {
                 this.confirmDeleteInvestment(investmentId);
             });
         });
+    },
+
+    updateSortButtonUI() {
+        const btn = document.getElementById('btnSortInvestments');
+        if (!btn) return;
+        const labelEl = btn.querySelector('span');
+        if (!labelEl) return;
+        const key = this.sortDirection === 'asc' ? 'sortAsc' : 'sortDesc';
+        labelEl.setAttribute('data-i18n', key);
+        labelEl.textContent = i18n.t(key);
     },
 
     /**
@@ -249,41 +274,45 @@ const Investments = {
                 return this.getEmptyTrendSvg(investmentId, symbol);
             }
 
-            const prices = history.map(h => h.price);
-            const dailyChanges = [];
-            for (let i = 1; i < prices.length; i++) {
-                const prev = prices[i - 1];
-                const curr = prices[i];
-                if (prev > 0) {
-                    dailyChanges.push(((curr - prev) / prev) * 100);
-                } else {
-                    dailyChanges.push(0);
-                }
-            }
+            const series = history
+                .slice()
+                .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
+                .slice(-30)
+                .map(h => Number(h.price))
+                .filter(v => Number.isFinite(v));
 
-            if (dailyChanges.length === 0) {
+            if (series.length < 2) {
                 return this.getEmptyTrendSvg(investmentId, symbol);
             }
 
-            const minChange = Math.min(...dailyChanges);
-            const maxChange = Math.max(...dailyChanges);
-            const absMax = Math.max(Math.abs(minChange), Math.abs(maxChange));
+            const minV = Math.min(...series);
+            const maxV = Math.max(...series);
+            const rawRange = maxV - minV;
+            const pad = rawRange > 0 ? (rawRange * 0.08) : (Math.max(1, Math.abs(maxV)) * 0.02);
+            const paddedMin = minV - pad;
+            const paddedMax = maxV + pad;
+            const range = (paddedMax - paddedMin) || 1;
 
-            const lastChange = dailyChanges[dailyChanges.length - 1] || 0;
-            const strokeColor = lastChange >= 0 ? 'var(--color-up)' : 'var(--color-down)';
+            const topY = 2;
+            const bottomY = 28;
 
-            const midY = 15;
-            const amplitude = 14;
+            const points = series.map((v, i) => {
+                const x = series.length === 1 ? 0 : (i / (series.length - 1)) * 60;
+                const ratio = (v - paddedMin) / range;
+                const y = bottomY - ratio * (bottomY - topY);
+                const yClamped = Math.max(1, Math.min(29, y));
+                return `${x.toFixed(2)},${yClamped.toFixed(2)}`;
+            });
 
-            const points = dailyChanges.map((change, i) => {
-                const x = dailyChanges.length === 1 ? 0 : (i / (dailyChanges.length - 1)) * 60;
-                const y = Math.max(1, Math.min(29, midY - (change / (absMax || 1)) * amplitude));
-                return `${x.toFixed(2)},${y.toFixed(2)}`;
-            }).join(' ');
+            const first = series[0];
+            const last = series[series.length - 1];
+            const delta = (Number.isFinite(first) && Number.isFinite(last)) ? (last - first) : 0;
+            const strokeColor = delta >= 0 ? 'var(--color-up)' : 'var(--color-down)';
+            const gradientId = `trend-grad-${investmentId}`;
+            const linePoints = points.join(' ');
+            const areaPoints = [`0,${bottomY}`, ...points, `60,${bottomY}`].join(' ');
 
-            const baseline = `0,${midY} 60,${midY}`;
-
-            return `<svg width="60" height="30" viewBox="0 0 60 30" data-investment-id="${investmentId}" data-symbol="${symbol}" xmlns="http://www.w3.org/2000/svg"><polyline fill="none" stroke="rgba(148, 163, 184, 0.35)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" points="${baseline}"/><polyline fill="none" stroke="${strokeColor}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" points="${points}"/></svg>`;
+            return `<svg width="60" height="30" viewBox="0 0 60 30" data-investment-id="${investmentId}" data-symbol="${symbol}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.18"/><stop offset="100%" stop-color="${strokeColor}" stop-opacity="0"/></linearGradient></defs><polygon fill="url(#${gradientId})" points="${areaPoints}"/><polyline fill="none" stroke="${strokeColor}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" points="${linePoints}"/></svg>`;
         } catch (error) {
             console.error('Error generating trend chart:', error);
             return this.getEmptyTrendSvg(investmentId, symbol);
@@ -761,7 +790,7 @@ const Investments = {
     async saveInvestment() {
         const id = document.getElementById('investmentId').value;
         const type = document.getElementById('investmentType').value;
-        const purchaseDate = document.getElementById('purchaseDate').value;
+        let purchaseDate = document.getElementById('purchaseDate').value;
         const note = document.getElementById('investmentNote').value.trim();
 
         let name = document.getElementById('symbolName').value.trim();
@@ -781,6 +810,11 @@ const Investments = {
             wealthCurrentAmount = parseFloat(document.getElementById('wealthCurrentAmount')?.value || '') || 0;
             maturityDate = (document.getElementById('wealthMaturityDate')?.value || '').trim() || null;
             const today = new Date().toISOString().split('T')[0];
+            if (!purchaseDate) {
+                purchaseDate = today;
+                const purchaseDateEl = document.getElementById('purchaseDate');
+                if (purchaseDateEl) purchaseDateEl.value = today;
+            }
             quantity = principal > 0 ? principal : 0;
             if (quantity <= 0 && wealthCurrentAmount > 0) {
                 if (annualInterestRate > 0 && purchaseDate) {
@@ -1096,53 +1130,75 @@ const Investments = {
      */
     async fetchFundInfo(code) {
         return new Promise((resolve) => {
-            // 定义全局JSONP回调函数
-            window.jsonpgz = (data) => {
-                if (data && data.name) {
-                    const estimatedPrice = parseFloat(data.gsz);
-                    const navPrice = parseFloat(data.dwjz);
-                    const price = (estimatedPrice && estimatedPrice > 0) ? estimatedPrice : navPrice;
-                    if (!price || price <= 0) {
-                        resolve(null);
-                        return;
-                    }
-                    resolve({
-                        name: data.name,
-                        price
-                    });
-                } else {
-                    resolve(null);
-                }
+            const fundCode = String(code || '').trim();
+            if (!fundCode) {
+                resolve(null);
+                return;
+            }
+
+            if (!this._fundJsonpPending) this._fundJsonpPending = Object.create(null);
+            if (!this._fundJsonpPending[fundCode]) this._fundJsonpPending[fundCode] = [];
+
+            if (!window.jsonpgz || !window.jsonpgz.__openpercentoDispatcher) {
+                const dispatcher = (data) => {
+                    try {
+                        const codeFromPayload = String(data?.fundcode || '').trim();
+                        if (!codeFromPayload) return;
+                        const list = this._fundJsonpPending?.[codeFromPayload];
+                        if (!list || list.length === 0) return;
+                        const callbacks = list.slice(0);
+                        this._fundJsonpPending[codeFromPayload] = [];
+                        callbacks.forEach(cb => {
+                            try { cb(data); } catch { }
+                        });
+                    } catch { }
+                };
+                dispatcher.__openpercentoDispatcher = true;
+                window.jsonpgz = dispatcher;
+            }
+
+            let finished = false;
+            const script = document.createElement('script');
+            script.src = `${this.apis.fund}/${fundCode}.js?rt=${Date.now()}`;
+
+            const cleanup = () => {
+                if (script.parentNode) script.parentNode.removeChild(script);
             };
 
-            const script = document.createElement('script');
-            script.src = `${this.apis.fund}/${code}.js?rt=${Date.now()}`;
+            const finish = (value) => {
+                if (finished) return;
+                finished = true;
+                cleanup();
+                resolve(value);
+            };
+
+            const cb = (data) => {
+                if (!data || !data.name) {
+                    finish(null);
+                    return;
+                }
+                const estimatedPrice = parseFloat(data.gsz);
+                const navPrice = parseFloat(data.dwjz);
+                const price = (estimatedPrice && estimatedPrice > 0) ? estimatedPrice : navPrice;
+                if (!price || price <= 0) {
+                    finish(null);
+                    return;
+                }
+                finish({ name: data.name, price });
+            };
+
+            this._fundJsonpPending[fundCode].push(cb);
 
             script.onerror = () => {
-                delete window.jsonpgz;
-                document.body.removeChild(script);
-                resolve(null);
+                const list = this._fundJsonpPending?.[fundCode] || [];
+                this._fundJsonpPending[fundCode] = list.filter(fn => fn !== cb);
+                finish(null);
             };
 
-            script.onload = () => {
-                // 清理
-                setTimeout(() => {
-                    delete window.jsonpgz;
-                    if (script.parentNode) {
-                        document.body.removeChild(script);
-                    }
-                }, 100);
-            };
-
-            // 设置超时
             setTimeout(() => {
-                if (window.jsonpgz) {
-                    delete window.jsonpgz;
-                    if (script.parentNode) {
-                        document.body.removeChild(script);
-                    }
-                    resolve(null);
-                }
+                const list = this._fundJsonpPending?.[fundCode] || [];
+                this._fundJsonpPending[fundCode] = list.filter(fn => fn !== cb);
+                finish(null);
             }, 5000);
 
             document.body.appendChild(script);

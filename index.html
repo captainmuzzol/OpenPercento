@@ -193,7 +193,7 @@
                                 height="16">
                                 <path d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
-                            <span data-i18n="edit">编辑</span>
+                            <span data-i18n="sort">排序</span>
                         </button>
                         <button id="btnAddAccount" class="btn btn-primary" title="Ctrl+N">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
@@ -223,14 +223,28 @@
             <section id="pageInvestments" class="page">
                 <header class="page-header">
                     <h2 data-i18n="investments">投资</h2>
-                    <button id="btnAddInvestment" class="btn btn-primary">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
-                            height="16">
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                        <span data-i18n="addInvestment">添加投资</span>
-                    </button>
+                    <div class="page-header-actions">
+                        <button id="btnSortInvestments" class="btn btn-secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <path d="M8 6h10" />
+                                <path d="M8 12h7" />
+                                <path d="M8 18h4" />
+                                <path d="M6 5v14" />
+                                <path d="M6 19l-2-2" />
+                                <path d="M6 19l2-2" />
+                            </svg>
+                            <span data-i18n="sortDesc">排序：降序</span>
+                        </button>
+                        <button id="btnAddInvestment" class="btn btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            <span data-i18n="addInvestment">添加投资</span>
+                        </button>
+                    </div>
                 </header>
 
                 <!-- 投资汇总 -->
@@ -467,7 +481,8 @@
                 <div class="settings-section">
                     <h3 data-i18n="about">关于</h3>
                     <div class="about-info">
-                        <p><strong>OpenPercento</strong> v1.0.0</p>
+                        <p><strong>OpenPercento</strong> v1.1.0</p>
+                        <p><strong>木只</strong></p>
                         <p data-i18n="aboutDesc">极简余额记账，专注净资产管理</p>
                         <p class="muted" data-i18n="privacyNote">所有数据仅存储在本地，无需登录，隐私优先</p>
                     </div>

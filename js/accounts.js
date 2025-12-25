@@ -240,10 +240,10 @@ const Accounts = {
         if (!labelEl) return;
         if (this.isEditMode) {
             labelEl.removeAttribute('data-i18n');
-            labelEl.textContent = i18n.currentLang === 'zh' ? '完成' : 'Done';
+            labelEl.textContent = i18n.t('done');
         } else {
-            labelEl.setAttribute('data-i18n', 'edit');
-            labelEl.textContent = i18n.t('edit');
+            labelEl.setAttribute('data-i18n', 'sort');
+            labelEl.textContent = i18n.t('sort');
         }
     },
 
@@ -894,25 +894,33 @@ const Accounts = {
 
         const minV = Math.min(...series);
         const maxV = Math.max(...series);
-        const range = (maxV - minV) || 1;
+        const rawRange = maxV - minV;
+        const pad = rawRange > 0 ? (rawRange * 0.08) : (Math.max(1, Math.abs(maxV)) * 0.02);
+        const paddedMin = minV - pad;
+        const paddedMax = maxV + pad;
+        const range = (paddedMax - paddedMin) || 1;
 
-        const midY = 15;
-        const amplitude = 14;
+        const topY = 2;
+        const bottomY = 28;
 
-        const polyPoints = series.map((v, i) => {
+        const pointsText = series.map((v, i) => {
             const x = series.length === 1 ? 0 : (i / (series.length - 1)) * 60;
-            const ratio = (v - minV) / range;
-            const y = Math.max(1, Math.min(29, (midY + amplitude) - ratio * (amplitude * 2)));
-            return `${x.toFixed(2)},${y.toFixed(2)}`;
-        }).join(' ');
+            const ratio = (v - paddedMin) / range;
+            const y = bottomY - ratio * (bottomY - topY);
+            const yClamped = Math.max(1, Math.min(29, y));
+            return `${x.toFixed(2)},${yClamped.toFixed(2)}`;
+        });
 
+        const first = series[0];
         const last = series[series.length - 1];
-        const prev = series[series.length - 2];
-        const delta = (Number.isFinite(last) && Number.isFinite(prev)) ? (last - prev) : 0;
+        const delta = (Number.isFinite(first) && Number.isFinite(last)) ? (last - first) : 0;
         const strokeColor = delta >= 0 ? 'var(--color-up)' : 'var(--color-down)';
-        const baseline = `0,${midY} 60,${midY}`;
+        const salt = points.length ? (Number(points[points.length - 1].id) || 0) : 0;
+        const gradientId = `balance-trend-grad-${salt}-${series.length}`;
+        const areaPoints = [`0,${bottomY}`, ...pointsText, `60,${bottomY}`].join(' ');
+        const linePoints = pointsText.join(' ');
 
-        return `<svg class="mini-trend" width="60" height="30" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg"><polyline fill="none" stroke="rgba(148, 163, 184, 0.25)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" points="${baseline}"/><polyline fill="none" stroke="${strokeColor}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" points="${polyPoints}"/></svg>`;
+        return `<svg class="mini-trend" width="60" height="30" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.18"/><stop offset="100%" stop-color="${strokeColor}" stop-opacity="0"/></linearGradient></defs><polygon fill="url(#${gradientId})" points="${areaPoints}"/><polyline fill="none" stroke="${strokeColor}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" points="${linePoints}"/></svg>`;
     },
 
     /**
