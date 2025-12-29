@@ -72,6 +72,22 @@ OpenPercento 是一款专注于隐私保护和极简体验的个人财务管理�
 
 3. **访问应用**：按终端输出打开地址（默认从 `http://127.0.0.1:9000/` 开始自动寻找可用端口）
 
+### 服务器部署（Linux）
+
+如果部署在 Linux 服务器并希望局域网/公网访问：
+
+1. **检查防火墙**：
+   ```bash
+   # 查看防火墙状态
+   sudo systemctl status firewalld
+
+   # 开放 9000 端口（如果使用 firewalld）
+   sudo firewall-cmd --zone=public --add-port=9000/tcp --permanent
+   sudo firewall-cmd --reload
+   ```
+
+2. **云服务器安全组**：如果使用阿里云/腾讯云/AWS，请务必在控制台“安全组”中放行 9000 端口。
+
 ### 浏览器模式
 
 直接在浏览器中打开 `index.html` 文件即可使用，数据将存储在浏览器的 IndexedDB 中。
@@ -135,6 +151,7 @@ OpenPercento 是一款专注于隐私保护和极简体验的个人财务管理�
 ## 待办：
 
 1. 优化更新余额UI
+2. webdav问题修复
 
 ## 已解决：
 1. 修复刷新价格时报错的问题

@@ -8,9 +8,27 @@ const Settings = {
      * 初始化设置模块
      */
     async init() {
-        await this.applyDbPathFromStorage();
+        const rememberedMode = localStorage.getItem('percento_sync_mode') || '';
+        if (rememberedMode !== 'webdav') {
+            await this.applyDbPathFromStorage();
+        } else {
+            localStorage.removeItem('percento_db_path');
+            if (DB.mode === 'api') {
+                try {
+                    await fetch('/api/config/resetDbPath', { method: 'POST', headers: { 'Accept': 'application/json' } });
+                } catch (e) { }
+            }
+        }
         await this.loadSettings();
+        await this.loadWebDAVSettings();
         this.bindEvents();
+        await this.updateSyncUI();
+        try {
+            const mode = localStorage.getItem('percento_sync_mode') || await DB.getSetting('syncMode', 'db');
+            const autoSync = await DB.getSetting('autoSync', false);
+            const enabled = autoSync === true || autoSync === 1 || autoSync === '1' || autoSync === 'true';
+            if (mode === 'webdav' && enabled) this.startAutoSync();
+        } catch (e) { }
     },
 
     /**
@@ -46,6 +64,42 @@ const Settings = {
 
         document.getElementById('btnApplyDbPath')?.addEventListener('click', async () => {
             await this.applyDbPath();
+        });
+
+        document.getElementById('syncModeSelect')?.addEventListener('change', async (e) => {
+            await this.setSyncMode(e.target.value);
+        });
+
+        document.getElementById('autoSyncToggle')?.addEventListener('change', async (e) => {
+            await this.setAutoSync(!!e.target.checked);
+        });
+
+        document.getElementById('syncIntervalSelect')?.addEventListener('change', async (e) => {
+            await this.setSyncInterval(parseInt(e.target.value));
+        });
+
+        document.getElementById('webdavUrl')?.addEventListener('change', async () => {
+            await this.saveWebDAVSettings();
+        });
+
+        document.getElementById('webdavUser')?.addEventListener('change', async () => {
+            await this.saveWebDAVSettings();
+        });
+
+        document.getElementById('webdavPass')?.addEventListener('change', async () => {
+            await this.saveWebDAVSettings();
+        });
+
+        document.getElementById('btnTestWebdav')?.addEventListener('click', async () => {
+            await this.testWebDAVConnection();
+        });
+
+        document.getElementById('btnSyncNow')?.addEventListener('click', async () => {
+            await this.syncWebDAV();
+        });
+
+        document.getElementById('btnRestoreWebdav')?.addEventListener('click', async () => {
+            await this.restoreFromWebDAV();
         });
     },
 
@@ -152,6 +206,8 @@ const Settings = {
 
     async applyDbPathFromStorage() {
         if (DB.mode !== 'api') return;
+        const rememberedMode = localStorage.getItem('percento_sync_mode') || '';
+        if (rememberedMode === 'webdav') return;
         const saved = localStorage.getItem('percento_db_path');
         if (!saved) return;
         try {
@@ -337,6 +393,353 @@ const Settings = {
      */
     async getCurrentCurrency() {
         return await DB.getSetting('currency', 'CNY');
+    },
+
+    async loadWebDAVSettings() {
+        const webdavUrl = await DB.getSetting('webdavUrl', '');
+        const webdavUser = await DB.getSetting('webdavUser', '');
+        const webdavPass = await DB.getSetting('webdavPass', '');
+        const syncMode = await DB.getSetting('syncMode', 'db');
+        const autoSync = await DB.getSetting('autoSync', false);
+        const syncInterval = await DB.getSetting('syncInterval', 15);
+        const lastSync = await DB.getSetting('lastSync', '');
+
+        const urlInput = document.getElementById('webdavUrl');
+        const userInput = document.getElementById('webdavUser');
+        const passInput = document.getElementById('webdavPass');
+        const syncModeSelect = document.getElementById('syncModeSelect');
+        const autoSyncToggle = document.getElementById('autoSyncToggle');
+        const syncIntervalSelect = document.getElementById('syncIntervalSelect');
+        const lastSyncEl = document.getElementById('lastSyncTime');
+
+        if (urlInput) urlInput.value = webdavUrl;
+        if (userInput) userInput.value = webdavUser;
+        if (passInput) passInput.value = webdavPass;
+
+        if (syncModeSelect) {
+            syncModeSelect.value = syncMode;
+        }
+        if (autoSyncToggle) {
+            autoSyncToggle.checked = autoSync === true || autoSync === 'true';
+        }
+        if (syncIntervalSelect) {
+            syncIntervalSelect.value = syncInterval || 15;
+        }
+        if (lastSyncEl) {
+            lastSyncEl.textContent = lastSync || i18n.t('neverSynced');
+        }
+    },
+
+    async saveWebDAVSettings() {
+        const urlInput = document.getElementById('webdavUrl');
+        const userInput = document.getElementById('webdavUser');
+        const passInput = document.getElementById('webdavPass');
+
+        if (urlInput) {
+            await DB.saveSetting('webdavUrl', urlInput.value);
+        }
+        if (userInput) {
+            await DB.saveSetting('webdavUser', userInput.value);
+        }
+        if (passInput) {
+            await DB.saveSetting('webdavPass', passInput.value);
+        }
+    },
+
+    async updateSyncUI() {
+        const syncModeSelect = document.getElementById('syncModeSelect');
+        const autoSyncSetting = document.getElementById('autoSyncSetting');
+        const syncIntervalSetting = document.getElementById('syncIntervalSetting');
+        const webdavActionButtons = document.getElementById('webdavActionButtons');
+        const webdavSettingsSection = document.getElementById('webdavSettingsSection');
+        const syncStatusDisplay = document.getElementById('syncStatusDisplay');
+        const storageSection = document.getElementById('storageSection');
+
+        if (!syncModeSelect) return;
+
+        const syncMode = syncModeSelect.value;
+        const isWebdavMode = syncMode === 'webdav';
+
+        if (autoSyncSetting) {
+            autoSyncSetting.style.display = isWebdavMode ? 'flex' : 'none';
+        }
+        if (syncIntervalSetting) {
+            syncIntervalSetting.classList.toggle('hidden', !isWebdavMode);
+        }
+        if (webdavActionButtons) {
+            webdavActionButtons.style.display = isWebdavMode ? 'flex' : 'none';
+        }
+        if (webdavSettingsSection) {
+            webdavSettingsSection.style.display = isWebdavMode ? 'block' : 'none';
+        }
+        if (storageSection) {
+            storageSection.style.display = isWebdavMode ? 'none' : 'block';
+        }
+        if (isWebdavMode) {
+            localStorage.removeItem('percento_db_path');
+            const input = document.getElementById('dbPathInput');
+            const currentEl = document.getElementById('dbPathCurrent');
+            if (input) input.value = '';
+            if (currentEl) currentEl.textContent = '-';
+        }
+        if (syncStatusDisplay) {
+            if (isWebdavMode) {
+                const webdavUrl = document.getElementById('webdavUrl')?.value;
+                if (webdavUrl && webdavUrl.trim()) {
+                    syncStatusDisplay.textContent = i18n.t('syncStatusConnected');
+                    syncStatusDisplay.style.color = 'var(--color-success)';
+                } else {
+                    syncStatusDisplay.textContent = i18n.t('syncStatusDisconnected');
+                    syncStatusDisplay.style.color = 'var(--color-text-muted)';
+                }
+            } else {
+                syncStatusDisplay.textContent = i18n.t('syncStatusConnected');
+                syncStatusDisplay.style.color = 'var(--color-success)';
+            }
+        }
+    },
+
+    async setSyncMode(mode) {
+        await DB.saveSetting('syncMode', mode);
+        localStorage.setItem('percento_sync_mode', mode);
+        if (mode === 'webdav') {
+            localStorage.removeItem('percento_db_path');
+            if (DB.mode === 'api') {
+                try {
+                    await fetch('/api/config/resetDbPath', { method: 'POST', headers: { 'Accept': 'application/json' } });
+                } catch (e) { }
+            }
+        }
+        await this.updateSyncUI();
+    },
+
+    async setAutoSync(enabled) {
+        await DB.saveSetting('autoSync', enabled);
+
+        if (enabled) {
+            this.startAutoSync();
+        } else {
+            this.stopAutoSync();
+        }
+    },
+
+    async setSyncInterval(minutes) {
+        await DB.saveSetting('syncInterval', minutes);
+        if (await DB.getSetting('autoSync', false)) {
+            this.stopAutoSync();
+            this.startAutoSync();
+        }
+    },
+
+    autoSyncTimer: null,
+
+    startAutoSync() {
+        this.stopAutoSync();
+        const interval = parseInt(document.getElementById('syncIntervalSelect')?.value || 15) * 60 * 1000;
+        this.syncWebDAV(false).catch(() => { });
+        this.autoSyncTimer = setInterval(async () => {
+            const mode = await DB.getSetting('syncMode', 'db');
+            if (mode === 'webdav') {
+                await this.syncWebDAV(false);
+            }
+        }, interval);
+    },
+
+    stopAutoSync() {
+        if (this.autoSyncTimer) {
+            clearInterval(this.autoSyncTimer);
+            this.autoSyncTimer = null;
+        }
+    },
+
+    async testWebDAVConnection() {
+        const url = document.getElementById('webdavUrl')?.value.trim();
+        const user = document.getElementById('webdavUser')?.value.trim();
+        const pass = document.getElementById('webdavPass')?.value;
+        const syncStatusDisplay = document.getElementById('syncStatusDisplay');
+
+        if (!url) {
+            App.showToast(i18n.currentLang === 'zh' ? '请输入WebDAV地址' : 'Please enter WebDAV URL', 'error');
+            return;
+        }
+
+        App.showLoading();
+
+        try {
+            const response = await fetch('/api/webdav/propfind', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: url,
+                    username: user,
+                    password: pass
+                })
+            });
+
+            if (response.status === 404) {
+                throw new Error(i18n.currentLang === 'zh'
+                    ? '后端未提供 WebDAV 接口，请确认运行的是项目自带 server.py'
+                    : 'Backend WebDAV API not found. Please run the bundled server.py');
+            }
+
+            const result = await response.json();
+
+            App.hideLoading();
+
+            if (result.ok) {
+                if (syncStatusDisplay) {
+                    syncStatusDisplay.textContent = i18n.t('webdavConnected');
+                    syncStatusDisplay.style.color = 'var(--color-success)';
+                }
+                App.showToast(i18n.currentLang === 'zh' ? '连接成功' : 'Connection successful');
+                await DB.saveSetting('webdavConnected', true);
+            } else {
+                const msg = result.hint || result.message || result.error || 'Connection failed';
+                throw new Error(msg);
+            }
+
+        } catch (error) {
+            App.hideLoading();
+            console.error('WebDAV test error:', error);
+            if (syncStatusDisplay) {
+                syncStatusDisplay.textContent = i18n.t('webdavConnectionFailed');
+                syncStatusDisplay.style.color = 'var(--color-danger)';
+            }
+            App.showToast(i18n.currentLang === 'zh' ? '连接失败' : 'Connection failed', 'error');
+            await DB.saveSetting('webdavConnected', false);
+        }
+    },
+
+    async syncWebDAV(showToast = true) {
+        const url = document.getElementById('webdavUrl')?.value.trim();
+        const user = document.getElementById('webdavUser')?.value.trim();
+        const pass = document.getElementById('webdavPass')?.value;
+        const syncStatusDisplay = document.getElementById('syncStatusDisplay');
+        const lastSyncEl = document.getElementById('lastSyncTime');
+
+        if (!url) {
+            App.showToast(i18n.currentLang === 'zh' ? '请先配置WebDAV' : 'Please configure WebDAV first', 'error');
+            return;
+        }
+
+        if (showToast) {
+            App.showLoading();
+        }
+
+        try {
+            const data = await DB.exportAllData();
+
+            const response = await fetch('/api/webdav/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: url,
+                    username: user,
+                    password: pass,
+                    filename: 'percento_backup.json',
+                    content: data
+                })
+            });
+
+            if (response.status === 404) {
+                throw new Error(i18n.currentLang === 'zh'
+                    ? '后端未提供 /api/webdav/upload。请查看运行 server.py 的终端输出端口，并确保浏览器打开的是同一个端口。'
+                    : 'Backend /api/webdav/upload not found. Ensure the browser uses the same port as server.py.');
+            }
+
+            const result = await response.json();
+
+            if (showToast) {
+                App.hideLoading();
+            }
+
+            if (result.ok) {
+                const now = new Date().toLocaleString();
+                if (lastSyncEl) {
+                    lastSyncEl.textContent = now;
+                }
+                if (syncStatusDisplay) {
+                    syncStatusDisplay.textContent = i18n.t('syncStatusSuccess');
+                    syncStatusDisplay.style.color = 'var(--color-success)';
+                }
+                await DB.saveSetting('lastSync', now);
+                if (showToast) {
+                    App.showToast(i18n.t('syncSuccess'));
+                }
+            } else {
+                const msg = result.hint || result.message || result.error || 'Sync failed';
+                throw new Error(msg);
+            }
+
+        } catch (error) {
+            if (showToast) {
+                App.hideLoading();
+            }
+            console.error('WebDAV sync error:', error);
+            if (syncStatusDisplay) {
+                const detail = error && error.message ? `: ${error.message}` : '';
+                syncStatusDisplay.textContent = `${i18n.t('syncStatusFailed')}${detail}`;
+                syncStatusDisplay.style.color = 'var(--color-danger)';
+            }
+            if (showToast) {
+                const msg = error && error.message ? `${i18n.t('syncFailed')}: ${error.message}` : i18n.t('syncFailed');
+                App.showToast(msg, 'error');
+            }
+        }
+    },
+
+    async restoreFromWebDAV() {
+        const url = document.getElementById('webdavUrl')?.value.trim();
+        const user = document.getElementById('webdavUser')?.value.trim();
+        const pass = document.getElementById('webdavPass')?.value;
+
+        if (!url) {
+            App.showToast(i18n.currentLang === 'zh' ? '请先配置WebDAV' : 'Please configure WebDAV first', 'error');
+            return;
+        }
+
+        App.showLoading();
+
+        try {
+            const response = await fetch('/api/webdav/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: url,
+                    username: user,
+                    password: pass,
+                    filename: 'percento_backup.json'
+                })
+            });
+
+            if (response.status === 404) {
+                throw new Error(i18n.currentLang === 'zh'
+                    ? '后端未提供 /api/webdav/download。请确认运行的是项目自带 server.py'
+                    : 'Backend /api/webdav/download not found. Please run the bundled server.py');
+            }
+
+            const result = await response.json();
+
+            if (result.ok && result.data) {
+                await DB.importData(result.data);
+                App.hideLoading();
+                App.showToast(i18n.currentLang === 'zh' ? '数据恢复成功' : 'Data restored');
+                if (window.App && typeof App.refreshAll === 'function') {
+                    await App.refreshAll();
+                }
+            } else {
+                const msg = result.hint || result.message || result.error || 'Restore failed';
+                throw new Error(msg);
+            }
+
+        } catch (error) {
+            App.hideLoading();
+            console.error('WebDAV restore error:', error);
+            const msg = error && error.message
+                ? (i18n.currentLang === 'zh' ? `恢复失败: ${error.message}` : `Restore failed: ${error.message}`)
+                : (i18n.currentLang === 'zh' ? '恢复失败' : 'Restore failed');
+            App.showToast(msg, 'error');
+        }
     }
 };
 

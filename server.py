@@ -1,13 +1,24 @@
 import json
+import ssl
 import sqlite3
+import urllib.request
+import urllib.error
+import base64
+import os
+import tempfile
+import email.utils
+import xml.etree.ElementTree as ET
+import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urlunparse, quote
 from datetime import datetime, timezone, timedelta
+from typing import Optional, List, Dict, Tuple
 
 
 ROOT_DIR = Path(__file__).resolve().parent
 DB_PATH = ROOT_DIR / "openpercento.db"
+DB_IO_LOCK = threading.RLock()
 
 
 def now_iso():
@@ -210,10 +221,29 @@ def execute_recurring_rule(conn, rule: dict, date_str: str) -> bool:
 
 
 def connect():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON;")
-    return conn
+    DB_IO_LOCK.acquire()
+    raw = sqlite3.connect(DB_PATH)
+    raw.row_factory = sqlite3.Row
+    raw.execute("PRAGMA foreign_keys = ON;")
+
+    class _LockedConn:
+        def __init__(self, conn, lock):
+            self._conn = conn
+            self._lock = lock
+
+        def __getattr__(self, name):
+            return getattr(self._conn, name)
+
+        def close(self):
+            try:
+                return self._conn.close()
+            finally:
+                try:
+                    self._lock.release()
+                except Exception:
+                    pass
+
+    return _LockedConn(raw, DB_IO_LOCK)
 
 
 def init_db():
@@ -348,6 +378,164 @@ def row_to_dict(row):
     return {k: row[k] for k in row.keys()}
 
 
+def _webdav_ssl_context():
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
+
+
+def _webdav_auth_header(username: str, password: str) -> str:
+    return "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+
+
+def _webdav_encode_url(url: str) -> str:
+    parsed = urlparse(url)
+    encoded_path = quote(parsed.path or "/", safe="/%")
+    return urlunparse((parsed.scheme, parsed.netloc, encoded_path, parsed.params, parsed.query, parsed.fragment))
+
+
+def _webdav_join(base_url: str, *parts: str) -> str:
+    if not base_url:
+        return ""
+    url = base_url
+    if not url.endswith("/"):
+        url += "/"
+    for p in parts:
+        if p is None:
+            continue
+        p2 = str(p).lstrip("/")
+        if not p2:
+            continue
+        url += p2
+        if not url.endswith("/"):
+            url += "/"
+    return url
+
+
+def _webdav_candidates(base_url: str) -> List[str]:
+    if not base_url:
+        return []
+    candidates = []
+    base = base_url if base_url.endswith("/") else base_url + "/"
+    candidates.append(base)
+    try:
+        parsed = urlparse(base)
+        host = (parsed.netloc or "").lower()
+        path = (parsed.path or "/").rstrip("/")
+        if "jianguoyun.com" in host and path == "/dav":
+            candidates.append(_webdav_join(base, "我的坚果云"))
+    except Exception:
+        pass
+    out = []
+    seen = set()
+    for c in candidates:
+        c2 = c if c.endswith("/") else c + "/"
+        if c2 not in seen:
+            seen.add(c2)
+            out.append(c2)
+    return out
+
+
+def _webdav_request(method: str, url: str, username: str, password: str, data: Optional[bytes] = None, headers: Optional[Dict[str, str]] = None, timeout: int = 30) -> Tuple[Optional[int], Optional[bytes], Optional[str]]:
+    request_headers = {
+        "Authorization": _webdav_auth_header(username, password),
+        "User-Agent": "OpenPercento/1.0",
+        "Accept": "*/*",
+        **(headers or {}),
+    }
+    req = urllib.request.Request(_webdav_encode_url(url), data=data, method=method, headers=request_headers)
+    ctx = _webdav_ssl_context()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as response:
+            return response.status, response.read(), None
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read()
+        except Exception:
+            body = b""
+        return e.code, body, None
+    except urllib.error.URLError as e:
+        return None, None, str(e.reason)
+
+
+def _parse_http_date(value: str) -> Optional[float]:
+    if not value:
+        return None
+    try:
+        dt = email.utils.parsedate_to_datetime(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except Exception:
+        return None
+
+
+def _webdav_parse_propfind(resp_xml: str) -> Dict[str, Optional[float]]:
+    out: Dict[str, Optional[float]] = {"size": None, "mtime": None}
+    if not resp_xml:
+        return out
+    try:
+        root = ET.fromstring(resp_xml)
+    except Exception:
+        return out
+
+    def local_name(tag: str) -> str:
+        return tag.split("}", 1)[1] if "}" in tag else tag
+
+    size_val = None
+    mtime_val = None
+    for el in root.iter():
+        name = local_name(el.tag).lower()
+        if name == "getcontentlength" and el.text and size_val is None:
+            try:
+                size_val = float(int(el.text.strip()))
+            except Exception:
+                pass
+        if name == "getlastmodified" and el.text and mtime_val is None:
+            mtime_val = _parse_http_date(el.text.strip())
+
+    out["size"] = size_val
+    out["mtime"] = mtime_val
+    return out
+
+
+def _webdav_stat_file(base_url: str, username: str, password: str, filename: str) -> Dict:
+    last_status = None
+    last_message = None
+    last_url = None
+    for candidate in _webdav_candidates(base_url):
+        file_url = _webdav_join(candidate, filename).rstrip("/")
+        last_url = file_url
+        status, resp_body, url_error = _webdav_request(
+            "PROPFIND",
+            file_url,
+            username,
+            password,
+            data=b'<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getcontentlength/><d:getlastmodified/></d:prop></d:propfind>',
+            headers={"Depth": "0", "Content-Type": "application/xml"},
+            timeout=15,
+        )
+        if url_error:
+            return {"ok": False, "error": "url_error", "message": url_error, "url": file_url}
+
+        last_status = status
+        if status == 404:
+            continue
+        if status in (200, 207):
+            xml_text = (resp_body or b"").decode("utf-8", errors="replace")
+            props = _webdav_parse_propfind(xml_text)
+            return {"ok": True, "exists": True, "url": file_url, "size": props.get("size"), "mtime": props.get("mtime")}
+
+        try:
+            last_message = (resp_body or b"")[:4000].decode("utf-8", errors="replace")
+        except Exception:
+            last_message = None
+        return {"ok": False, "error": "http_error", "status": status, "message": last_message, "url": file_url}
+
+    return {"ok": True, "exists": False, "status": last_status, "message": last_message, "url": last_url}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT_DIR), **kwargs)
@@ -421,6 +609,368 @@ class Handler(SimpleHTTPRequestHandler):
             DB_PATH = p
             init_db()
             return self._send_json(200, {"ok": True, "dbPath": str(DB_PATH)})
+
+        if path == "/api/config/resetDbPath":
+            if self.command != "POST":
+                return self._method_not_allowed()
+            DB_PATH = ROOT_DIR / "openpercento.db"
+            init_db()
+            return self._send_json(200, {"ok": True, "dbPath": str(DB_PATH)})
+
+        if path in ("/api/webdav/propfind", "/api/webdav/propfind/"):
+            if self.command != "POST":
+                return self._method_not_allowed()
+            
+            body = self._read_json() or {}
+            webdav_url = body.get("url")
+            username = body.get("username")
+            password = body.get("password")
+            
+            if webdav_url is None or username is None or password is None or not str(webdav_url).strip():
+                return self._bad_request("missing_credentials")
+            
+            base = str(webdav_url).strip()
+            status, resp_body, url_error = _webdav_request(
+                "PROPFIND",
+                base if base.endswith("/") else base + "/",
+                str(username),
+                str(password),
+                data=b'<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>',
+                headers={"Depth": "0", "Content-Type": "application/xml"},
+                timeout=10,
+            )
+            if url_error:
+                return self._send_json(200, {"ok": False, "error": "url_error", "message": url_error})
+            if status in (200, 207):
+                return self._send_json(200, {"ok": True, "status": status})
+            msg = None
+            try:
+                msg = (resp_body or b"")[:2000].decode("utf-8", errors="replace")
+            except Exception:
+                msg = None
+            return self._send_json(200, {"ok": False, "error": "http_error", "status": status, "message": msg})
+
+        if path in ("/api/webdav/upload", "/api/webdav/upload/"):
+            if self.command != "POST":
+                return self._method_not_allowed()
+            
+            body = self._read_json() or {}
+            webdav_url = body.get("url")
+            username = body.get("username")
+            password = body.get("password")
+            filename = body.get("filename")
+            has_content = isinstance(body, dict) and ("content" in body)
+
+            if webdav_url is None or username is None or password is None or not filename or not has_content:
+                return self._bad_request("missing_parameters")
+
+            base = str(webdav_url).strip()
+            content = body.get("content")
+            data = json.dumps(content, ensure_ascii=False).encode("utf-8") if isinstance(content, (dict, list)) else str(content).encode("utf-8")
+
+            last_error = None
+            last_status = None
+            last_message = None
+            last_url = None
+
+            for candidate in _webdav_candidates(base):
+                file_url = _webdav_join(candidate, str(filename).lstrip("/")).rstrip("/")
+                last_url = file_url
+                status, resp_body, url_error = _webdav_request(
+                    "PUT",
+                    file_url,
+                    str(username),
+                    str(password),
+                    data=data,
+                    headers={"Content-Type": "application/json; charset=utf-8"},
+                    timeout=30,
+                )
+                if url_error:
+                    last_error = "url_error"
+                    last_message = url_error
+                    last_status = None
+                    break
+                if status in (200, 201, 204):
+                    return self._send_json(200, {"ok": True, "status": status, "url": file_url})
+
+                last_status = status
+                try:
+                    last_message = (resp_body or b"")[:4000].decode("utf-8", errors="replace")
+                except Exception:
+                    last_message = None
+                last_error = "http_error"
+                if status == 404:
+                    continue
+                break
+
+            hint = None
+            try:
+                parsed2 = urlparse(base)
+                if "jianguoyun.com" in (parsed2.netloc or "").lower() and (parsed2.path or "").rstrip("/") == "/dav":
+                    hint = "坚果云通常需要使用 https://dav.jianguoyun.com/dav/我的坚果云/ 作为保存目录"
+            except Exception:
+                hint = None
+
+            return self._send_json(
+                200,
+                {
+                    "ok": False,
+                    "error": last_error or "sync_failed",
+                    "status": last_status,
+                    "url": last_url,
+                    "message": last_message,
+                    "hint": hint,
+                },
+            )
+
+        if path in ("/api/webdav/download", "/api/webdav/download/"):
+            if self.command != "POST":
+                return self._method_not_allowed()
+            
+            body = self._read_json() or {}
+            webdav_url = body.get("url")
+            username = body.get("username")
+            password = body.get("password")
+            filename = body.get("filename")
+            
+            if webdav_url is None or username is None or password is None or not filename:
+                return self._bad_request("missing_parameters")
+
+            base = str(webdav_url).strip()
+            last_status = None
+            last_message = None
+            last_url = None
+            for candidate in _webdav_candidates(base):
+                file_url = _webdav_join(candidate, str(filename).lstrip("/")).rstrip("/")
+                last_url = file_url
+                status, resp_body, url_error = _webdav_request("GET", file_url, str(username), str(password), timeout=30)
+                if url_error:
+                    return self._send_json(200, {"ok": False, "error": "url_error", "message": url_error, "url": file_url})
+                if status == 200:
+                    raw = (resp_body or b"").decode("utf-8", errors="replace")
+                    try:
+                        data = json.loads(raw)
+                        return self._send_json(200, {"ok": True, "data": data, "url": file_url})
+                    except Exception:
+                        return self._send_json(200, {"ok": True, "data": raw, "url": file_url})
+                last_status = status
+                try:
+                    last_message = (resp_body or b"")[:4000].decode("utf-8", errors="replace")
+                except Exception:
+                    last_message = None
+                if status == 404:
+                    continue
+                break
+
+            hint = None
+            try:
+                parsed2 = urlparse(base)
+                if "jianguoyun.com" in (parsed2.netloc or "").lower() and (parsed2.path or "").rstrip("/") == "/dav":
+                    hint = "坚果云通常需要使用 https://dav.jianguoyun.com/dav/我的坚果云/ 作为保存目录"
+            except Exception:
+                hint = None
+
+            return self._send_json(200, {"ok": False, "error": "http_error", "status": last_status, "message": last_message, "url": last_url, "hint": hint})
+
+        if path in ("/api/webdav/db/sync", "/api/webdav/db/sync/"):
+            if self.command != "POST":
+                return self._method_not_allowed()
+
+            body = self._read_json() or {}
+            webdav_url = body.get("url")
+            username = body.get("username")
+            password = body.get("password")
+            remote_filename = body.get("filename") or "openpercento.db"
+            force = body.get("force")
+
+            if webdav_url is None or username is None or password is None or not str(webdav_url).strip():
+                return self._bad_request("missing_parameters")
+
+            local_path = ROOT_DIR / "openpercento.db"
+            local_exists = local_path.exists()
+            local_size = None
+            local_mtime = None
+            if local_exists:
+                try:
+                    st = local_path.stat()
+                    local_size = int(st.st_size)
+                    local_mtime = float(st.st_mtime)
+                except Exception:
+                    local_exists = False
+
+            remote_stat = _webdav_stat_file(str(webdav_url).strip(), str(username), str(password), str(remote_filename).lstrip("/"))
+            if not remote_stat.get("ok"):
+                hint = remote_stat.get("hint")
+                if not hint:
+                    try:
+                        parsed2 = urlparse(str(webdav_url).strip())
+                        if "jianguoyun.com" in (parsed2.netloc or "").lower() and (parsed2.path or "").rstrip("/") == "/dav":
+                            hint = "坚果云通常需要使用 https://dav.jianguoyun.com/dav/我的坚果云/ 作为保存目录"
+                    except Exception:
+                        hint = None
+                return self._send_json(200, {**remote_stat, "hint": hint})
+
+            remote_exists = bool(remote_stat.get("exists"))
+            remote_size = remote_stat.get("size")
+            remote_mtime = remote_stat.get("mtime")
+
+            def choose_action():
+                if force == "upload":
+                    return "upload"
+                if force == "download":
+                    return "download"
+                if local_exists and not remote_exists:
+                    return "upload"
+                if remote_exists and not local_exists:
+                    return "download"
+                if not local_exists and not remote_exists:
+                    return "noop"
+
+                try:
+                    ls = int(local_size or 0)
+                    rs = int(remote_size or 0)
+                except Exception:
+                    ls, rs = 0, 0
+                if ls != rs:
+                    return "upload" if ls > rs else "download"
+
+                lm = float(local_mtime or 0)
+                rm = float(remote_mtime or 0)
+                if lm == 0 and rm == 0:
+                    return "noop"
+                return "upload" if lm >= rm else "download"
+
+            action = choose_action()
+
+            if action == "upload":
+                if not local_exists:
+                    return self._send_json(200, {"ok": False, "error": "local_db_missing"})
+                try:
+                    DB_IO_LOCK.acquire()
+                    try:
+                        data = local_path.read_bytes()
+                    finally:
+                        try:
+                            DB_IO_LOCK.release()
+                        except Exception:
+                            pass
+                except Exception as e:
+                    return self._send_json(200, {"ok": False, "error": "read_local_failed", "message": str(e)})
+
+                last_error = None
+                last_status = None
+                last_message = None
+                last_url = None
+                for candidate in _webdav_candidates(str(webdav_url).strip()):
+                    file_url = _webdav_join(candidate, str(remote_filename).lstrip("/")).rstrip("/")
+                    last_url = file_url
+                    status, resp_body, url_error = _webdav_request(
+                        "PUT",
+                        file_url,
+                        str(username),
+                        str(password),
+                        data=data,
+                        headers={"Content-Type": "application/octet-stream"},
+                        timeout=60,
+                    )
+                    if url_error:
+                        last_error = "url_error"
+                        last_message = url_error
+                        last_status = None
+                        break
+                    if status in (200, 201, 204):
+                        return self._send_json(
+                            200,
+                            {
+                                "ok": True,
+                                "action": "upload",
+                                "url": file_url,
+                                "local": {"exists": local_exists, "size": local_size, "mtime": local_mtime},
+                                "remote": {"exists": remote_exists, "size": remote_size, "mtime": remote_mtime},
+                            },
+                        )
+                    last_status = status
+                    try:
+                        last_message = (resp_body or b"")[:4000].decode("utf-8", errors="replace")
+                    except Exception:
+                        last_message = None
+                    last_error = "http_error"
+                    if status == 404:
+                        continue
+                    break
+
+                hint = None
+                try:
+                    parsed2 = urlparse(str(webdav_url).strip())
+                    if "jianguoyun.com" in (parsed2.netloc or "").lower() and (parsed2.path or "").rstrip("/") == "/dav":
+                        hint = "坚果云通常需要使用 https://dav.jianguoyun.com/dav/我的坚果云/ 作为保存目录"
+                except Exception:
+                    hint = None
+                return self._send_json(200, {"ok": False, "error": last_error, "status": last_status, "message": last_message, "url": last_url, "hint": hint})
+
+            if action == "download":
+                if not remote_exists:
+                    return self._send_json(200, {"ok": False, "error": "remote_db_missing"})
+
+                remote_file_url = remote_stat.get("url")
+                status, resp_body, url_error = _webdav_request("GET", str(remote_file_url), str(username), str(password), timeout=60)
+                if url_error:
+                    return self._send_json(200, {"ok": False, "error": "url_error", "message": url_error, "url": remote_file_url})
+                if status != 200:
+                    msg = None
+                    try:
+                        msg = (resp_body or b"")[:4000].decode("utf-8", errors="replace")
+                    except Exception:
+                        msg = None
+                    return self._send_json(200, {"ok": False, "error": "http_error", "status": status, "message": msg, "url": remote_file_url})
+
+                DB_IO_LOCK.acquire()
+                try:
+                    tmp = None
+                    try:
+                        with tempfile.NamedTemporaryFile(prefix="openpercento_", suffix=".db", dir=str(ROOT_DIR), delete=False) as f:
+                            tmp = f.name
+                            f.write(resp_body or b"")
+                        os.replace(tmp, str(local_path))
+                        tmp = None
+                        if remote_mtime:
+                            try:
+                                os.utime(str(local_path), (float(remote_mtime), float(remote_mtime)))
+                            except Exception:
+                                pass
+                        init_db()
+                    finally:
+                        if tmp:
+                            try:
+                                os.unlink(tmp)
+                            except Exception:
+                                pass
+                finally:
+                    try:
+                        DB_IO_LOCK.release()
+                    except Exception:
+                        pass
+
+                return self._send_json(
+                    200,
+                    {
+                        "ok": True,
+                        "action": "download",
+                        "url": remote_file_url,
+                        "local": {"exists": True, "size": local_size, "mtime": local_mtime},
+                        "remote": {"exists": remote_exists, "size": remote_size, "mtime": remote_mtime},
+                    },
+                )
+
+            return self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "action": "noop",
+                    "local": {"exists": local_exists, "size": local_size, "mtime": local_mtime},
+                    "remote": {"exists": remote_exists, "size": remote_size, "mtime": remote_mtime},
+                },
+            )
 
         def parse_id(segment):
             try:
@@ -1219,7 +1769,7 @@ def main():
     for port in range(base_port, base_port + 50):
         try:
             server = ThreadingHTTPServer((host, port), Handler)
-            print(f"Serving on http://127.0.0.1:{port}/")
+            print(f"Serving on http://{host}:{port}/")
             server.serve_forever()
             return
         except OSError as e:

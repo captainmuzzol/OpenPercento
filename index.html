@@ -327,37 +327,6 @@
                 </div>
 
                 <div class="data-section">
-                    <h3 data-i18n="webdavSync">WebDAV 同步</h3>
-                    <div class="form-group">
-                        <label data-i18n="webdavUrl">WebDAV 地址</label>
-                        <input type="url" id="webdavUrl" class="input" placeholder="https://your-server.com/dav/">
-                    </div>
-                    <div class="form-group">
-                        <label data-i18n="webdavUser">用户名</label>
-                        <input type="text" id="webdavUser" class="input">
-                    </div>
-                    <div class="form-group">
-                        <label data-i18n="webdavPass">密码</label>
-                        <input type="password" id="webdavPass" class="input">
-                    </div>
-                    <div class="data-actions">
-                        <button id="btnWebdavSync" class="btn btn-primary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
-                                height="16">
-                                <polyline points="23,4 23,10 17,10" />
-                                <polyline points="1,20 1,14 7,14" />
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                            </svg>
-                            <span data-i18n="syncNow">立即同步</span>
-                        </button>
-                        <button id="btnWebdavTest" class="btn btn-secondary">
-                            <span data-i18n="testConnection">测试连接</span>
-                        </button>
-                    </div>
-                    <p class="sync-status" id="syncStatus"></p>
-                </div>
-
-                <div class="data-section">
                     <h3 data-i18n="passwordLock">密码锁</h3>
                     <div class="toggle-group">
                         <label data-i18n="enablePassword">启用密码锁</label>
@@ -397,6 +366,69 @@
                 <header class="page-header">
                     <h2 data-i18n="settings">设置</h2>
                 </header>
+
+                <div class="settings-section">
+                    <h3 data-i18n="sync">同步</h3>
+                    <div class="setting-item">
+                        <span data-i18n="syncMode">同步方式</span>
+                        <select id="syncModeSelect" class="select">
+                            <option value="db" data-i18n="syncModeDb">本地数据库</option>
+                            <option value="webdav" data-i18n="syncModeWebdav">WebDAV 云同步</option>
+                        </select>
+                    </div>
+                    <div class="setting-item" id="autoSyncSetting">
+                        <span data-i18n="autoSync">自动同步</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoSyncToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item hidden" id="syncIntervalSetting">
+                        <span data-i18n="syncInterval">同步间隔</span>
+                        <select id="syncIntervalSelect" class="select">
+                            <option value="5">5 <span data-i18n="minutes">分钟</span></option>
+                            <option value="10">10 <span data-i18n="minutes">分钟</span></option>
+                            <option value="15">15 <span data-i18n="minutes">分钟</span></option>
+                            <option value="30">30 <span data-i18n="minutes">分钟</span></option>
+                            <option value="60">60 <span data-i18n="minutes">分钟</span></option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="lastSync">上次同步</span>
+                        <span id="lastSyncTime" class="setting-value muted" data-i18n="neverSynced">从未同步</span>
+                    </div>
+                    <div class="setting-item">
+                        <span data-i18n="syncStatus">同步状态</span>
+                        <span id="syncStatusDisplay" class="setting-value muted" data-i18n="syncStatusDisconnected">未连接</span>
+                    </div>
+                    <div class="setting-actions" id="webdavActionButtons" style="display: none; margin-top: var(--spacing-md);">
+                        <button id="btnTestWebdav" class="btn btn-secondary">
+                            <span data-i18n="testConnection">测试连接</span>
+                        </button>
+                        <button id="btnSyncNow" class="btn btn-primary">
+                            <span data-i18n="syncNow">立即同步</span>
+                        </button>
+                        <button id="btnRestoreWebdav" class="btn btn-secondary">
+                            <span data-i18n="restoreFromCloud">从云端恢复</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-section" id="webdavSettingsSection">
+                    <h3 data-i18n="webdavSync">WebDAV 同步</h3>
+                    <div class="form-group">
+                        <label data-i18n="webdavUrl">WebDAV 地址</label>
+                        <input type="url" id="webdavUrl" class="input" placeholder="https://your-server.com/dav/">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="webdavUser">用户名</label>
+                        <input type="text" id="webdavUser" class="input">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="webdavPass">密码</label>
+                        <input type="password" id="webdavPass" class="input">
+                    </div>
+                </div>
 
                 <div class="settings-section">
                     <h3 data-i18n="appearance">外观</h3>
