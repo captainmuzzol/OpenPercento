@@ -1466,9 +1466,16 @@ const App = {
 
         // 数字键 1-6: 快速导航
         if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-            const pages = ['dashboard', 'accounts', 'investments', 'data', 'settings'];
+            const lockScreen = document.getElementById('lockScreen');
+            if (lockScreen && !lockScreen.classList.contains('hidden')) {
+                return;
+            }
+            if (this.currentPage === 'settings') {
+                return;
+            }
+            const pages = ['dashboard', 'accounts', 'investments', 'settings'];
             const num = parseInt(e.key);
-            if (num >= 1 && num <= 5) {
+            if (num >= 1 && num <= 4) {
                 this.navigateTo(pages[num - 1]);
             }
         }

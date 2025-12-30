@@ -1033,6 +1033,27 @@ const DB = {
         });
     },
 
+    /**
+     * 获取所有价格历史记录
+     * @returns {Promise<Array>}
+     */
+    async getAllPriceHistory() {
+        if (this.mode === 'api') {
+            const res = await this._fetchJson('/api/priceHistory', { method: 'GET' });
+            return res || [];
+        }
+        return new Promise((resolve, reject) => {
+            const store = this.getStore(this.stores.priceHistory);
+            const request = store.getAll();
+            request.onsuccess = () => {
+                const results = request.result || [];
+                results.sort((a, b) => new Date(a.date) - new Date(b.date));
+                resolve(results);
+            };
+            request.onerror = () => reject(request.error);
+        });
+    },
+
     // ==================== 数据导出/导入 ====================
 
     /**
@@ -1046,6 +1067,7 @@ const DB = {
         const accounts = await this.getAllAccounts();
         const transactions = await this.getAllTransactions();
         const investments = await this.getAllInvestments();
+        const priceHistory = await this.getAllPriceHistory();
         const settings = await this.getAllSettings();
         const snapshots = await this.getAllSnapshots();
 
@@ -1055,6 +1077,7 @@ const DB = {
             accounts,
             transactions,
             investments,
+            priceHistory,
             settings,
             snapshots
         };
@@ -1095,6 +1118,13 @@ const DB = {
         if (data.investments && Array.isArray(data.investments)) {
             for (const investment of data.investments) {
                 await this.addInvestment(investment);
+            }
+        }
+
+        // 导入价格历史记录
+        if (data.priceHistory && Array.isArray(data.priceHistory)) {
+            for (const history of data.priceHistory) {
+                await this.addPriceHistory(history);
             }
         }
 

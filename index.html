@@ -73,14 +73,6 @@
                     </svg>
                     <span data-i18n="investments">投资</span>
                 </a>
-                <a href="#" class="nav-item" data-page="data">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7,10 12,15 17,10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    <span data-i18n="dataManagement">数据</span>
-                </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <circle cx="12" cy="12" r="3" />
@@ -295,72 +287,6 @@
                 </button>
             </section>
 
-            <!-- 数据管理页面 -->
-            <section id="pageData" class="page">
-                <header class="page-header">
-                    <h2 data-i18n="dataManagement">数据管理</h2>
-                </header>
-
-                <div class="data-section">
-                    <h3 data-i18n="exportImport">导入/导出</h3>
-                    <div class="data-actions">
-                        <button id="btnExportCSV" class="btn btn-secondary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
-                                height="16">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="7,10 12,15 17,10" />
-                                <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                            <span data-i18n="exportCSV">导出CSV</span>
-                        </button>
-                        <button id="btnImportCSV" class="btn btn-secondary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
-                                height="16">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="17,8 12,3 7,8" />
-                                <line x1="12" y1="3" x2="12" y2="15" />
-                            </svg>
-                            <span data-i18n="importCSV">导入CSV</span>
-                        </button>
-                        <input type="file" id="csvFileInput" accept=".csv" hidden>
-                    </div>
-                </div>
-
-                <div class="data-section">
-                    <h3 data-i18n="passwordLock">密码锁</h3>
-                    <div class="toggle-group">
-                        <label data-i18n="enablePassword">启用密码锁</label>
-                        <label class="toggle">
-                            <input type="checkbox" id="enablePassword">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div id="passwordSetup" class="hidden">
-                        <div class="form-group">
-                            <label data-i18n="setPassword">设置密码 (4位以上)</label>
-                            <input type="password" id="newPassword" class="input" minlength="4">
-                        </div>
-                        <div class="form-group">
-                            <label data-i18n="confirmPassword">确认密码</label>
-                            <input type="password" id="confirmPassword" class="input" minlength="4">
-                        </div>
-                        <button id="btnSavePassword" class="btn btn-primary" data-i18n="savePassword">保存密码</button>
-                    </div>
-                </div>
-
-                <div class="data-section danger-zone">
-                    <h3 data-i18n="dangerZone">危险操作</h3>
-                    <button id="btnClearData" class="btn btn-danger">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
-                            height="16">
-                            <polyline points="3,6 5,6 21,6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                        <span data-i18n="clearAllData">清除所有数据</span>
-                    </button>
-                </div>
-            </section>
-
             <!-- 设置页面 -->
             <section id="pageSettings" class="page">
                 <header class="page-header">
@@ -517,9 +443,69 @@
                 </div>
 
                 <div class="settings-section">
+                    <h3 data-i18n="dataManagement">数据管理</h3>
+                    <div class="data-section">
+                        <h4 data-i18n="exportImport">导入/导出</h4>
+                        <div class="data-actions">
+                            <button id="btnExportCSV" class="btn btn-secondary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                    height="16">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7,10 12,15 17,10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                <span data-i18n="exportCSV">导出CSV</span>
+                            </button>
+                            <button id="btnImportCSV" class="btn btn-secondary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                    height="16">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17,8 12,3 7,8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
+                                </svg>
+                                <span data-i18n="importCSV">导入CSV</span>
+                            </button>
+                            <input type="file" id="csvFileInput" accept=".csv" hidden>
+                        </div>
+                    </div>
+                    <div class="data-section">
+                        <h4 data-i18n="passwordLock">密码锁</h4>
+                        <div class="toggle-group">
+                            <label data-i18n="enablePassword">启用密码锁</label>
+                            <label class="toggle">
+                                <input type="checkbox" id="enablePassword">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="passwordSetup" class="hidden">
+                            <div class="form-group">
+                                <label data-i18n="setPassword">设置密码 (4位以上)</label>
+                                <input type="password" id="newPassword" class="input" minlength="4">
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="confirmPassword">确认密码</label>
+                                <input type="password" id="confirmPassword" class="input" minlength="4">
+                            </div>
+                            <button id="btnSavePassword" class="btn btn-primary" data-i18n="savePassword">保存密码</button>
+                        </div>
+                    </div>
+                    <div class="data-section danger-zone">
+                        <h4 data-i18n="dangerZone">危险操作</h4>
+                        <button id="btnClearData" class="btn btn-danger">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16"
+                                height="16">
+                                <polyline points="3,6 5,6 21,6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                            <span data-i18n="clearAllData">清除所有数据</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
                     <h3 data-i18n="about">关于</h3>
                     <div class="about-info">
-                        <p><strong>OpenPercento</strong> v1.3.0</p>
+                        <p><strong>OpenPercento</strong> v1.3.1</p>
                         <p><strong>木只</strong></p>
                         <p data-i18n="aboutDesc">极简余额记账，专注净资产管理</p>
                         <p class="muted" data-i18n="privacyNote">所有数据仅存储在本地，无需登录，隐私优先</p>

@@ -1588,6 +1588,7 @@ class Handler(SimpleHTTPRequestHandler):
                 accounts = [row_to_dict(r) for r in conn.execute("SELECT * FROM accounts ORDER BY id ASC").fetchall()]
                 transactions = [row_to_dict(r) for r in conn.execute("SELECT * FROM transactions ORDER BY date DESC, id DESC").fetchall()]
                 investments = [row_to_dict(r) for r in conn.execute("SELECT * FROM investments ORDER BY id ASC").fetchall()]
+                priceHistory = [row_to_dict(r) for r in conn.execute("SELECT * FROM priceHistory ORDER BY id ASC").fetchall()]
                 settings_rows = conn.execute("SELECT key, value FROM settings ORDER BY key ASC").fetchall()
                 settings = {}
                 for r in settings_rows:
@@ -1602,6 +1603,7 @@ class Handler(SimpleHTTPRequestHandler):
                     "accounts": accounts,
                     "transactions": transactions,
                     "investments": investments,
+                    "priceHistory": priceHistory,
                     "settings": settings,
                     "snapshots": snapshots,
                 }
@@ -1696,6 +1698,23 @@ class Handler(SimpleHTTPRequestHandler):
                             inv.get("note"),
                             inv.get("createdAt") or now_iso(),
                             inv.get("updatedAt") or now_iso(),
+                        ),
+                    )
+                for ph in body.get("priceHistory") or []:
+                    conn.execute(
+                        """
+                        INSERT INTO priceHistory (id, investmentId, date, price, type, symbol, createdAt, updatedAt)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            ph.get("id"),
+                            int(ph.get("investmentId") or 0),
+                            ph.get("date"),
+                            float(ph.get("price") or 0),
+                            ph.get("type"),
+                            ph.get("symbol"),
+                            ph.get("createdAt") or now_iso(),
+                            ph.get("updatedAt") or now_iso(),
                         ),
                     )
                 for key, val in (body.get("settings") or {}).items():
