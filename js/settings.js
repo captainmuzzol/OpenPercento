@@ -618,7 +618,12 @@ const Settings = {
         const lastSyncEl = document.getElementById('lastSyncTime');
 
         if (!url) {
-            App.showToast(i18n.currentLang === 'zh' ? '请先配置WebDAV' : 'Please configure WebDAV first', 'error');
+            if (showToast) App.showToast(i18n.currentLang === 'zh' ? '请先配置WebDAV' : 'Please configure WebDAV first', 'error');
+            return;
+        }
+
+        if (DB.mode !== 'api') {
+            if (showToast) App.showToast(i18n.currentLang === 'zh' ? 'WebDAV 云同步需要先运行本地服务（server.py）' : 'WebDAV sync requires running local server (server.py)', 'error');
             return;
         }
 
@@ -627,24 +632,21 @@ const Settings = {
         }
 
         try {
-            const data = await DB.exportAllData();
-
-            const response = await fetch('/api/webdav/upload', {
+            const response = await fetch('/api/webdav/db/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     url: url,
                     username: user,
                     password: pass,
-                    filename: 'percento_backup.json',
-                    content: data
+                    filename: 'openpercento.db'
                 })
             });
 
             if (response.status === 404) {
                 throw new Error(i18n.currentLang === 'zh'
-                    ? '后端未提供 /api/webdav/upload。请查看运行 server.py 的终端输出端口，并确保浏览器打开的是同一个端口。'
-                    : 'Backend /api/webdav/upload not found. Ensure the browser uses the same port as server.py.');
+                    ? '后端未提供 /api/webdav/db/sync。请查看运行 server.py 的终端输出端口，并确保浏览器打开的是同一个端口。'
+                    : 'Backend /api/webdav/db/sync not found. Ensure the browser uses the same port as server.py.');
             }
 
             const result = await response.json();
@@ -664,7 +666,17 @@ const Settings = {
                 }
                 await DB.saveSetting('lastSync', now);
                 if (showToast) {
-                    App.showToast(i18n.t('syncSuccess'));
+                    const action = result.action || '';
+                    const msgZh = action === 'upload'
+                        ? '同步成功：已上传本地数据库'
+                        : (action === 'download' ? '同步成功：已下载云端数据库' : '同步完成：无需更新');
+                    const msgEn = action === 'upload'
+                        ? 'Sync success: uploaded local DB'
+                        : (action === 'download' ? 'Sync success: downloaded remote DB' : 'Sync complete: no changes');
+                    App.showToast(i18n.currentLang === 'zh' ? msgZh : msgEn);
+                }
+                if (result.action === 'download' && window.App && typeof App.refreshAll === 'function') {
+                    await App.refreshAll();
                 }
             } else {
                 const msg = result.hint || result.message || result.error || 'Sync failed';
@@ -701,29 +713,44 @@ const Settings = {
         App.showLoading();
 
         try {
-            const response = await fetch('/api/webdav/download', {
+            if (DB.mode !== 'api') {
+                App.hideLoading();
+                App.showToast(i18n.currentLang === 'zh' ? '从云端恢复需要先运行本地服务（server.py）' : 'Restore requires running local server (server.py)', 'error');
+                return;
+            }
+
+            const response = await fetch('/api/webdav/db/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     url: url,
                     username: user,
                     password: pass,
-                    filename: 'percento_backup.json'
+                    filename: 'openpercento.db',
+                    force: 'download'
                 })
             });
 
             if (response.status === 404) {
                 throw new Error(i18n.currentLang === 'zh'
-                    ? '后端未提供 /api/webdav/download。请确认运行的是项目自带 server.py'
-                    : 'Backend /api/webdav/download not found. Please run the bundled server.py');
+                    ? '后端未提供 /api/webdav/db/sync。请确认运行的是项目自带 server.py'
+                    : 'Backend /api/webdav/db/sync not found. Please run the bundled server.py');
             }
 
             const result = await response.json();
 
-            if (result.ok && result.data) {
-                await DB.importData(result.data);
+            if (result.ok) {
                 App.hideLoading();
-                App.showToast(i18n.currentLang === 'zh' ? '数据恢复成功' : 'Data restored');
+                const action = result.action || '';
+                const msgZh = action === 'download' ? '已从云端恢复数据库' : '恢复完成';
+                const msgEn = action === 'download' ? 'Database restored from cloud' : 'Restore complete';
+                App.showToast(i18n.currentLang === 'zh' ? msgZh : msgEn);
+
+                const now = new Date().toLocaleString();
+                const lastSyncEl = document.getElementById('lastSyncTime');
+                if (lastSyncEl) lastSyncEl.textContent = now;
+                await DB.saveSetting('lastSync', now);
+
                 if (window.App && typeof App.refreshAll === 'function') {
                     await App.refreshAll();
                 }
