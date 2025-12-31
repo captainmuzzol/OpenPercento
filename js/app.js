@@ -759,12 +759,23 @@ const Recurring = {
             await this.saveFromForm();
         });
 
+        document.getElementById('btnCancelEdit')?.addEventListener('click', async () => {
+            this.editingId = null;
+            document.getElementById('btnCancelEdit').classList.add('hidden');
+            document.getElementById('btnSaveRecurring').textContent = i18n.t('add');
+            document.getElementById('recurringModalTitle').textContent = this.context.kind === 'investment' ? i18n.t('dca') : i18n.t('recurring');
+            document.getElementById('recurringForm').reset();
+        });
+
         listEl?.addEventListener('click', async (e) => {
             const item = e.target.closest('.recurring-item');
             if (!item) return;
             const id = parseInt(item.dataset.id, 10);
             if (!id) return;
 
+            if (e.target.closest('[data-action="edit"]')) {
+                await this.editRule(id);
+            }
             if (e.target.closest('[data-action="toggle"]')) {
                 await this.toggleRule(id);
             }
@@ -802,6 +813,10 @@ const Recurring = {
         const investmentIdEl = document.getElementById('recurringInvestmentId');
 
         if (!modal || !kindEl || !accountIdEl || !investmentIdEl) return;
+
+        this.editingId = null;
+        document.getElementById('btnCancelEdit').classList.add('hidden');
+        document.getElementById('btnSaveRecurring').textContent = i18n.t('add');
 
         kindEl.value = this.context.kind || '';
         accountIdEl.value = this.context.accountId ? String(this.context.accountId) : '';
@@ -911,6 +926,7 @@ const Recurring = {
                     <span class="history-date">${this.escapeHtml(String(r.nextRun || '-'))}</span>
                     <span class="history-reason">${this.escapeHtml(this.describeRule(r))}</span>
                     <span class="history-balance">
+                        <button type="button" class="btn btn-secondary" data-action="edit">${this.escapeHtml(i18n.t('edit'))}</button>
                         <button type="button" class="btn btn-secondary" data-action="toggle">${this.escapeHtml(tag)}</button>
                         <button type="button" class="btn btn-danger" data-action="delete">${this.escapeHtml(i18n.t('delete'))}</button>
                     </span>
@@ -1017,10 +1033,22 @@ const Recurring = {
         }
 
         base.nextRun = this.computeInitialNextRun(base);
-        const id = await DB.addRecurringRule(base);
-        if (id) {
+        
+        if (this.editingId) {
+            base.id = this.editingId;
+            await DB.updateRecurringRule(base);
+            this.editingId = null;
+            document.getElementById('btnCancelEdit').classList.add('hidden');
+            document.getElementById('btnSaveRecurring').textContent = i18n.t('add');
+            document.getElementById('recurringModalTitle').textContent = this.context.kind === 'investment' ? i18n.t('dca') : i18n.t('recurring');
             App.showToast(i18n.t('scheduleSaved'));
             await this.renderList();
+        } else {
+            const id = await DB.addRecurringRule(base);
+            if (id) {
+                App.showToast(i18n.t('scheduleSaved'));
+                await this.renderList();
+            }
         }
     },
 
@@ -1076,6 +1104,36 @@ const Recurring = {
         rule.enabled = !rule.enabled;
         await DB.updateRecurringRule(rule);
         await this.renderList();
+    },
+
+    async editRule(id) {
+        const rule = await this.getRuleById(id);
+        if (!rule) return;
+
+        this.editingId = id;
+        const form = document.getElementById('recurringForm');
+        const title = document.getElementById('recurringModalTitle');
+        const saveBtn = document.getElementById('btnSaveRecurring');
+        const cancelEditBtn = document.getElementById('btnCancelEdit');
+
+        title.textContent = i18n.currentLang === 'zh' ? '编辑周期任务' : 'Edit Schedule';
+        saveBtn.textContent = i18n.t('save');
+        cancelEditBtn.classList.remove('hidden');
+
+        document.getElementById('recurringKind').value = rule.kind || '';
+        document.getElementById('recurringAccountId').value = rule.accountId || '';
+        document.getElementById('recurringInvestmentId').value = rule.investmentId || '';
+        document.getElementById('recurringAction').value = rule.action || '';
+        document.getElementById('recurringFrequency').value = rule.frequency || 'daily';
+        document.getElementById('recurringWeekday').value = rule.weekday || '1';
+        document.getElementById('recurringMonthDay').value = rule.monthDay || '1';
+        document.getElementById('recurringYearDay').value = rule.yearDay || '1';
+        document.getElementById('recurringFromAccount').value = rule.fromAccountId || '';
+        document.getElementById('recurringToAccount').value = rule.toAccountId || '';
+        document.getElementById('recurringAmount').value = rule.amount || '';
+        document.getElementById('recurringNote').value = rule.note || '';
+
+        this.updateFormVisibility();
     },
 
     async deleteRule(id) {

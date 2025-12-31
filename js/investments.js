@@ -6,6 +6,8 @@
 const Investments = {
     currentType: 'all',
     sortDirection: 'desc',
+    _investmentDetailPage: 1,
+    _investmentDetailTotalPages: 1,
 
     // API 配置
     apis: {
@@ -105,6 +107,13 @@ const Investments = {
             await Recurring.openForInvestment(investmentId);
         });
 
+        document.getElementById('btnManageInvestmentRecurring')?.addEventListener('click', async () => {
+            const modal = document.getElementById('investmentDetailModal');
+            const investmentId = parseInt(modal?.dataset?.investmentId || '', 10);
+            if (!investmentId) return;
+            await Recurring.openForInvestment(investmentId);
+        });
+
         // 投资类型按钮选择（仅在模态框打开时绑定，避免初始化时元素不存在）
         // 移到 openInvestmentModal 中处理
 
@@ -148,7 +157,7 @@ const Investments = {
             const investmentId = parseInt(card.dataset.id);
 
             card.addEventListener('click', () => {
-                this.openInvestmentModal(investmentId);
+                this.showInvestmentDetail(investmentId);
             });
 
             // 编辑
@@ -1544,6 +1553,186 @@ const Investments = {
                 }
             }
         );
+    },
+
+    async showInvestmentDetail(investmentId) {
+        const investment = await DB.getInvestment(investmentId);
+        if (!investment) return;
+
+        const modal = document.getElementById('investmentDetailModal');
+        const title = document.getElementById('investmentDetailTitle');
+        const summary = document.getElementById('investmentDetailSummary');
+        const historyList = document.getElementById('investmentHistoryList');
+        const btnRecurring = document.getElementById('btnManageInvestmentRecurring');
+        const prevBtn = document.getElementById('investmentHistoryPrev');
+        const nextBtn = document.getElementById('investmentHistoryNext');
+        const pageInfo = document.getElementById('investmentHistoryPageInfo');
+
+        title.textContent = investment.name;
+        modal.dataset.investmentId = String(investmentId);
+
+        const marketValue = investment.quantity * investment.currentPrice;
+        const cost = investment.quantity * investment.costPrice;
+        const profit = marketValue - cost;
+        const profitRate = cost > 0 ? (profit / cost * 100) : 0;
+
+        const profitClass = profit >= 0 ? 'positive' : 'negative';
+        const profitSign = profit >= 0 ? '+' : '';
+
+        const typeLabels = {
+            stock: i18n.t('typeStock'),
+            fund: i18n.t('typeFund'),
+            crypto: i18n.t('typeCrypto'),
+            wealth: i18n.t('typeWealth')
+        };
+
+        const isWealth = investment.type === 'wealth';
+        const priceLabel = isWealth ? (i18n.currentLang === 'zh' ? '累计收益' : 'Interest') : (i18n.currentLang === 'zh' ? '当前价' : 'Current');
+        const priceValue = isWealth ? App.formatCurrency(profit) : App.formatCurrency(investment.currentPrice);
+
+        summary.innerHTML = `
+            <div class="detail-item">
+                <span class="label">${i18n.currentLang === 'zh' ? '类型' : 'Type'}</span>
+                <span class="value">${typeLabels[investment.type]}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">${i18n.currentLang === 'zh' ? '代码' : 'Code'}</span>
+                <span class="value">${this.escapeHtml(investment.symbol)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">${priceLabel}</span>
+                <span class="value">${priceValue}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">${i18n.currentLang === 'zh' ? '持仓' : 'Quantity'}</span>
+                <span class="value">${investment.quantity.toFixed(4)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">${i18n.currentLang === 'zh' ? '成本价' : 'Cost Price'}</span>
+                <span class="value">${App.formatCurrency(investment.costPrice)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">${i18n.currentLang === 'zh' ? '市值' : 'Market Value'}</span>
+                <span class="value">${App.formatCurrency(marketValue)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">${i18n.currentLang === 'zh' ? '盈亏' : 'Profit/Loss'}</span>
+                <span class="value ${profitClass}">${profitSign}${App.formatCurrency(profit)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="label">${i18n.currentLang === 'zh' ? '盈亏率' : 'Profit Rate'}</span>
+                <span class="value ${profitClass}">${profitSign}${profitRate.toFixed(2)}%</span>
+            </div>
+            ${investment.purchaseDate ? `
+                <div class="detail-item">
+                    <span class="label">${i18n.currentLang === 'zh' ? '购买日期' : 'Purchase Date'}</span>
+                    <span class="value">${investment.purchaseDate}</span>
+                </div>
+            ` : ''}
+            ${isWealth && investment.wealthProductType ? `
+                <div class="detail-item">
+                    <span class="label">${i18n.currentLang === 'zh' ? '产品类型' : 'Product Type'}</span>
+                    <span class="value">${investment.wealthProductType === 'regular' ? (i18n.currentLang === 'zh' ? '定期' : 'Regular') : (i18n.currentLang === 'zh' ? '活期' : 'Irregular')}</span>
+                </div>
+            ` : ''}
+            ${isWealth && investment.annualInterestRate ? `
+                <div class="detail-item">
+                    <span class="label">${i18n.currentLang === 'zh' ? '年利率' : 'Annual Rate'}</span>
+                    <span class="value">${investment.annualInterestRate}%</span>
+                </div>
+            ` : ''}
+            ${isWealth && investment.maturityDate ? `
+                <div class="detail-item">
+                    <span class="label">${i18n.currentLang === 'zh' ? '到期日期' : 'Maturity Date'}</span>
+                    <span class="value">${investment.maturityDate}</span>
+                </div>
+            ` : ''}
+            ${investment.note ? `
+                <div class="detail-item" style="grid-column: span 2;">
+                    <span class="label">${i18n.t('note')}</span>
+                    <span class="value">${this.escapeHtml(investment.note)}</span>
+                </div>
+            ` : ''}
+        `;
+
+        this._investmentDetailPage = 1;
+
+        await this._renderInvestmentHistory(investment, historyList, prevBtn, nextBtn, pageInfo);
+
+        prevBtn.onclick = async () => {
+            if (this._investmentDetailPage > 1) {
+                this._investmentDetailPage--;
+                await this._renderInvestmentHistory(investment, historyList, prevBtn, nextBtn, pageInfo);
+            }
+        };
+
+        nextBtn.onclick = async () => {
+            if (this._investmentDetailPage < this._investmentDetailTotalPages) {
+                this._investmentDetailPage++;
+                await this._renderInvestmentHistory(investment, historyList, prevBtn, nextBtn, pageInfo);
+            }
+        };
+
+        btnRecurring.onclick = async () => {
+            await Recurring.openForInvestment(investmentId);
+        };
+
+        App.openModal(modal);
+    },
+
+    async _renderInvestmentHistory(investment, historyList, prevBtn, nextBtn, pageInfo) {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 90);
+
+        const history = await DB.getPriceHistoryByInvestment(
+            investment.id,
+            startDate.toISOString().split('T')[0],
+            endDate.toISOString().split('T')[0]
+        );
+
+        const pageSize = 6;
+        this._investmentDetailTotalPages = Math.ceil(history.length / pageSize) || 1;
+
+        if (this._investmentDetailPage > this._investmentDetailTotalPages) {
+            this._investmentDetailPage = this._investmentDetailTotalPages;
+        }
+
+        const startIndex = (this._investmentDetailPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageHistory = history.slice(startIndex, endIndex);
+
+        const isWealth = investment.type === 'wealth';
+
+        if (history.length === 0) {
+            historyList.innerHTML = `<p class="muted">${i18n.currentLang === 'zh' ? '暂无记录' : 'No records'}</p>`;
+        } else {
+            historyList.innerHTML = pageHistory
+                .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
+                .map(h => {
+                    const price = Number(h.price);
+                    const marketValueAtDate = investment.quantity * price;
+                    const costAtDate = investment.quantity * investment.costPrice;
+                    const profitAtDate = marketValueAtDate - costAtDate;
+                    const profitClass = profitAtDate >= 0 ? 'positive' : 'negative';
+                    const profitSign = profitAtDate >= 0 ? '+' : '';
+
+                    return `
+                        <div class="history-item">
+                            <span class="history-date">${h.date}</span>
+                            <span class="history-reason">${isWealth ? (i18n.currentLang === 'zh' ? '利息累计' : 'Interest') : (i18n.currentLang === 'zh' ? '价格更新' : 'Price Update')}</span>
+                            <span class="history-balance">
+                                ${App.formatCurrency(marketValueAtDate)}
+                                <span class="history-change ${profitClass}">${profitSign}${App.formatCurrency(profitAtDate)}</span>
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+        }
+
+        pageInfo.textContent = `${this._investmentDetailPage} / ${this._investmentDetailTotalPages}`;
+        prevBtn.disabled = this._investmentDetailPage <= 1;
+        nextBtn.disabled = this._investmentDetailPage >= this._investmentDetailTotalPages;
     },
 
     /**

@@ -638,10 +638,10 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label data-i18n="balanceDeltaDirection">入账/出账</label>
-                        <select id="balanceDeltaDirection" class="select">
-                            <option value="in" data-i18n="income">入账</option>
-                            <option value="out" data-i18n="expense">出账</option>
-                        </select>
+                        <div class="button-group" id="balanceDeltaDirection">
+                            <button type="button" class="btn-toggle active" data-value="in" data-i18n="income">入账</button>
+                            <button type="button" class="btn-toggle" data-value="out" data-i18n="expense">出账</button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label data-i18n="balanceDeltaAmount">变动金额</label>
@@ -864,11 +864,44 @@
                 <div class="detail-section">
                     <h4 data-i18n="balanceHistory">余额变动记录</h4>
                     <div class="history-list" id="accountHistoryList"></div>
+                    <div class="pagination" id="accountHistoryPagination">
+                        <button type="button" class="pagination-btn" id="accountHistoryPrev" disabled>&lt;</button>
+                        <span class="pagination-info" id="accountHistoryPageInfo">1 / 1</span>
+                        <button type="button" class="pagination-btn" id="accountHistoryNext" disabled>&gt;</button>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" id="btnManageAccountRecurring" class="btn btn-secondary"
                     data-i18n="recurring">周期记</button>
+                <button type="button" class="btn btn-secondary modal-cancel" data-i18n="close">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 投资详情模态框 -->
+    <div id="investmentDetailModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="investmentDetailTitle">投资详情</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-summary" id="investmentDetailSummary"></div>
+                <div class="detail-section">
+                    <h4 data-i18n="balanceHistory">交易记录</h4>
+                    <div class="history-list" id="investmentHistoryList"></div>
+                    <div class="pagination" id="investmentHistoryPagination">
+                        <button type="button" class="pagination-btn" id="investmentHistoryPrev" disabled>&lt;</button>
+                        <span class="pagination-info" id="investmentHistoryPageInfo">1 / 1</span>
+                        <button type="button" class="pagination-btn" id="investmentHistoryNext" disabled>&gt;</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnManageInvestmentRecurring" class="btn btn-secondary"
+                    data-i18n="dca">定投</button>
                 <button type="button" class="btn btn-secondary modal-cancel" data-i18n="close">关闭</button>
             </div>
         </div>
@@ -962,6 +995,7 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <button type="button" id="btnCancelEdit" class="btn btn-secondary hidden" data-i18n="cancel">取消编辑</button>
                 <button type="button" class="btn btn-secondary modal-cancel" data-i18n="cancel">取消</button>
                 <button type="button" id="btnSaveRecurring" class="btn btn-primary" data-i18n="add">添加</button>
             </div>

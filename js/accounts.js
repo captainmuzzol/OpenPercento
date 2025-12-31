@@ -27,6 +27,8 @@ const Accounts = {
     _dragMoveHandler: null,
     _dragEndHandler: null,
     _suppressClickUntil: 0,
+    _accountDetailPage: 1,
+    _accountDetailTotalPages: 1,
     groupConfig: {
         current: {
             labelKey: 'groupCurrent',
@@ -199,9 +201,18 @@ const Accounts = {
         document.getElementById('balanceDeltaAmount')?.addEventListener('input', () => {
             this.syncNewBalanceFromDelta();
         });
-        document.getElementById('balanceDeltaDirection')?.addEventListener('change', () => {
-            this.syncNewBalanceFromDelta();
-        });
+
+        const deltaDirGroup = document.getElementById('balanceDeltaDirection');
+        if (deltaDirGroup) {
+            deltaDirGroup.addEventListener('click', (e) => {
+                const btn = e.target.closest('.btn-toggle');
+                if (btn) {
+                    deltaDirGroup.querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this.syncNewBalanceFromDelta();
+                }
+            });
+        }
         document.getElementById('newBalance')?.addEventListener('input', () => {
             const deltaAmountEl = document.getElementById('balanceDeltaAmount');
             if (!deltaAmountEl) return;
@@ -800,7 +811,7 @@ const Accounts = {
             // 转账按钮
             card.querySelector('.btn-transfer').addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.openTransferModal(accountId);
+                this.openTransferModal(`account-${accountId}`);
             });
 
             // 删除按钮
@@ -1155,8 +1166,12 @@ const Accounts = {
         const select = document.getElementById('balanceAccount');
 
         form.reset();
-        const deltaDirEl = document.getElementById('balanceDeltaDirection');
-        if (deltaDirEl) deltaDirEl.value = 'in';
+        const deltaDirGroup = document.getElementById('balanceDeltaDirection');
+        if (deltaDirGroup) {
+            deltaDirGroup.querySelectorAll('.btn-toggle').forEach(b => b.classList.remove('active'));
+            const inBtn = deltaDirGroup.querySelector('[data-value="in"]');
+            if (inBtn) inBtn.classList.add('active');
+        }
 
         // 填充账户选择
         const accounts = await DB.getAllAccounts();
@@ -1187,10 +1202,10 @@ const Accounts = {
 
     syncNewBalanceFromDelta() {
         const deltaAmountEl = document.getElementById('balanceDeltaAmount');
-        const deltaDirEl = document.getElementById('balanceDeltaDirection');
+        const deltaDirGroup = document.getElementById('balanceDeltaDirection');
         const newBalanceEl = document.getElementById('newBalance');
         const prevEl = document.getElementById('previousBalance');
-        if (!deltaAmountEl || !deltaDirEl || !newBalanceEl || !prevEl) return;
+        if (!deltaAmountEl || !deltaDirGroup || !newBalanceEl || !prevEl) return;
 
         const rawPrev = parseFloat(prevEl.dataset.raw);
         if (!Number.isFinite(rawPrev)) return;
@@ -1198,7 +1213,9 @@ const Accounts = {
         const delta = parseFloat(deltaAmountEl.value);
         if (!Number.isFinite(delta) || delta <= 0) return;
 
-        const sign = deltaDirEl.value === 'out' ? -1 : 1;
+        const activeBtn = deltaDirGroup.querySelector('.btn-toggle.active');
+        const deltaDir = activeBtn ? activeBtn.dataset.value : 'in';
+        const sign = deltaDir === 'out' ? -1 : 1;
         newBalanceEl.value = String(rawPrev + sign * delta);
     },
 
@@ -1225,7 +1242,8 @@ const Accounts = {
             let newBalance = NaN;
 
             const deltaAmount = deltaAmountEl ? parseFloat(deltaAmountEl.value) : NaN;
-            const deltaDir = deltaDirEl ? String(deltaDirEl.value || '') : '';
+            const activeBtn = deltaDirEl ? deltaDirEl.querySelector('.btn-toggle.active') : null;
+            const deltaDir = activeBtn ? activeBtn.dataset.value : '';
             if (Number.isFinite(deltaAmount) && deltaAmount > 0 && (deltaDir === 'in' || deltaDir === 'out')) {
                 const sign = deltaDir === 'out' ? -1 : 1;
                 newBalance = previousBalance + sign * deltaAmount;
@@ -1280,16 +1298,27 @@ const Accounts = {
 
         form.reset();
 
-        // 填充账户选择
         const accounts = await DB.getAllAccounts();
-        const options = accounts.map(a =>
-            `<option value="${a.id}">${this.escapeHtml(a.name)} (${App.formatCurrency(a.balance)})</option>`
+        const investments = await DB.getAllInvestments();
+
+        const filteredAccounts = accounts.filter(a => {
+            const primary = this.normalizeGroup(a.group).primary;
+            return primary !== 'fixed' && primary !== 'receivable';
+        });
+
+        const accountOptions = filteredAccounts.map(a =>
+            `<option value="account-${a.id}">${this.escapeHtml(a.name)} (${App.formatCurrency(a.balance)})</option>`
         ).join('');
+
+        const investmentOptions = investments.map(inv =>
+            `<option value="investment-${inv.id}">${this.escapeHtml(inv.name)} (${this.escapeHtml(inv.symbol)})</option>`
+        ).join('');
+
+        const options = accountOptions + investmentOptions;
 
         fromSelect.innerHTML = options;
         toSelect.innerHTML = options;
 
-        // 设置默认日期
         document.getElementById('transferDate').value = new Date().toISOString().split('T')[0];
 
         if (fromAccountId) {
@@ -1303,13 +1332,13 @@ const Accounts = {
      * 执行转账（复式记账）
      */
     async executeTransfer() {
-        const fromAccountId = parseInt(document.getElementById('fromAccount').value);
-        const toAccountId = parseInt(document.getElementById('toAccount').value);
+        const fromValue = document.getElementById('fromAccount').value;
+        const toValue = document.getElementById('toAccount').value;
         const amount = parseFloat(document.getElementById('transferAmount').value);
         const note = document.getElementById('transferNote').value.trim();
         const date = document.getElementById('transferDate').value;
 
-        if (fromAccountId === toAccountId) {
+        if (fromValue === toValue) {
             App.showToast(i18n.currentLang === 'zh' ? '转出和转入账户不能相同' : 'From and To accounts cannot be the same', 'error');
             return;
         }
@@ -1320,57 +1349,123 @@ const Accounts = {
         }
 
         try {
-            const fromAccount = await DB.getAccount(fromAccountId);
-            const toAccount = await DB.getAccount(toAccountId);
+            const fromType = fromValue.startsWith('account-') ? 'account' : 'investment';
+            const toType = toValue.startsWith('account-') ? 'account' : 'investment';
+            const fromId = parseInt(fromValue.replace(/^(account-|investment-)/, ''), 10);
+            const toId = parseInt(toValue.replace(/^(account-|investment-)/, ''), 10);
 
-            if (!fromAccount || !toAccount) return;
+            if (fromType === 'account' && toType === 'account') {
+                const fromAccount = await DB.getAccount(fromId);
+                const toAccount = await DB.getAccount(toId);
 
-            const fromPrevBalance = fromAccount.balance;
-            const toPrevBalance = toAccount.balance;
+                if (!fromAccount || !toAccount) return;
 
-            // 更新转出账户
-            fromAccount.balance -= amount;
-            await DB.updateAccount(fromAccount);
+                const fromPrevBalance = fromAccount.balance;
+                const toPrevBalance = toAccount.balance;
 
-            // 更新转入账户
-            toAccount.balance += amount;
-            await DB.updateAccount(toAccount);
+                fromAccount.balance -= amount;
+                await DB.updateAccount(fromAccount);
 
-            const transferNote = note || `${i18n.currentLang === 'zh' ? '转账' : 'Transfer'}: ${fromAccount.name} → ${toAccount.name}`;
+                toAccount.balance += amount;
+                await DB.updateAccount(toAccount);
 
-            // 记录转出交易
-            await DB.addTransaction({
-                accountId: fromAccountId,
-                type: 'transfer_out',
-                previousBalance: fromPrevBalance,
-                newBalance: fromAccount.balance,
-                amount: -amount,
-                reason: transferNote,
-                relatedAccountId: toAccountId,
-                date: date
-            });
+                const transferNote = note || `${i18n.currentLang === 'zh' ? '转账' : 'Transfer'}: ${fromAccount.name} → ${toAccount.name}`;
 
-            // 记录转入交易
-            await DB.addTransaction({
-                accountId: toAccountId,
-                type: 'transfer_in',
-                previousBalance: toPrevBalance,
-                newBalance: toAccount.balance,
-                amount: amount,
-                reason: transferNote,
-                relatedAccountId: fromAccountId,
-                date: date
-            });
+                await DB.addTransaction({
+                    accountId: fromId,
+                    type: 'transfer_out',
+                    previousBalance: fromPrevBalance,
+                    newBalance: fromAccount.balance,
+                    amount: -amount,
+                    reason: transferNote,
+                    relatedAccountId: toId,
+                    date: date
+                });
+
+                await DB.addTransaction({
+                    accountId: toId,
+                    type: 'transfer_in',
+                    previousBalance: toPrevBalance,
+                    newBalance: toAccount.balance,
+                    amount: amount,
+                    reason: transferNote,
+                    relatedAccountId: fromId,
+                    date: date
+                });
+            } else if (fromType === 'account' && toType === 'investment') {
+                const account = await DB.getAccount(fromId);
+                const investment = await DB.getInvestment(toId);
+
+                if (!account || !investment) return;
+
+                const prevBalance = account.balance;
+                const currentPrice = investment.currentPrice || investment.costPrice || 1;
+                const quantity = amount / currentPrice;
+
+                account.balance -= amount;
+                await DB.updateAccount(account);
+
+                investment.quantity += quantity;
+                investment.costPrice = ((investment.costPrice || 0) * (investment.quantity - quantity) + amount) / investment.quantity;
+                await DB.updateInvestment(investment);
+
+                const transferNote = note || `${i18n.currentLang === 'zh' ? '买入' : 'Buy'} ${investment.name}`;
+
+                await DB.addTransaction({
+                    accountId: fromId,
+                    type: 'investment_buy',
+                    previousBalance: prevBalance,
+                    newBalance: account.balance,
+                    amount: -amount,
+                    reason: transferNote,
+                    relatedInvestmentId: toId,
+                    date: date
+                });
+            } else if (fromType === 'investment' && toType === 'account') {
+                const investment = await DB.getInvestment(fromId);
+                const account = await DB.getAccount(toId);
+
+                if (!investment || !account) return;
+
+                const prevBalance = account.balance;
+                const currentPrice = investment.currentPrice || investment.costPrice || 1;
+                const quantity = amount / currentPrice;
+
+                if (quantity > investment.quantity) {
+                    App.showToast(i18n.currentLang === 'zh' ? '卖出数量超过持仓' : 'Sell quantity exceeds holding', 'error');
+                    return;
+                }
+
+                investment.quantity -= quantity;
+                await DB.updateInvestment(investment);
+
+                account.balance += amount;
+                await DB.updateAccount(account);
+
+                const transferNote = note || `${i18n.currentLang === 'zh' ? '卖出' : 'Sell'} ${investment.name}`;
+
+                await DB.addTransaction({
+                    accountId: toId,
+                    type: 'investment_sell',
+                    previousBalance: prevBalance,
+                    newBalance: account.balance,
+                    amount: amount,
+                    reason: transferNote,
+                    relatedInvestmentId: fromId,
+                    date: date
+                });
+            } else {
+                App.showToast(i18n.currentLang === 'zh' ? '投资之间不能直接转账' : 'Cannot transfer between investments directly', 'error');
+                return;
+            }
 
             App.closeModal(document.getElementById('transferModal'));
             App.showToast(i18n.t('transferCompleted'));
 
-            // 刷新视图
             await this.renderAccountList();
             await this.renderDashboardAccounts();
             await App.updateDashboardStats();
             await DB.recordDailySnapshot();
-
         } catch (error) {
             console.error('Error executing transfer:', error);
             App.showToast(i18n.currentLang === 'zh' ? '转账失败' : 'Transfer failed', 'error');
@@ -1389,6 +1484,9 @@ const Accounts = {
         const title = document.getElementById('accountDetailTitle');
         const summary = document.getElementById('accountDetailSummary');
         const historyList = document.getElementById('accountHistoryList');
+        const prevBtn = document.getElementById('accountHistoryPrev');
+        const nextBtn = document.getElementById('accountHistoryNext');
+        const pageInfo = document.getElementById('accountHistoryPageInfo');
 
         title.textContent = account.name;
         modal.dataset.accountId = String(accountId);
@@ -1425,13 +1523,44 @@ const Accounts = {
             ` : ''}
         `;
 
-        // 获取交易记录
+        this._accountDetailPage = 1;
+
+        await this._renderAccountHistory(accountId, historyList, prevBtn, nextBtn, pageInfo);
+
+        prevBtn.onclick = async () => {
+            if (this._accountDetailPage > 1) {
+                this._accountDetailPage--;
+                await this._renderAccountHistory(accountId, historyList, prevBtn, nextBtn, pageInfo);
+            }
+        };
+
+        nextBtn.onclick = async () => {
+            if (this._accountDetailPage < this._accountDetailTotalPages) {
+                this._accountDetailPage++;
+                await this._renderAccountHistory(accountId, historyList, prevBtn, nextBtn, pageInfo);
+            }
+        };
+
+        App.openModal(modal);
+    },
+
+    async _renderAccountHistory(accountId, historyList, prevBtn, nextBtn, pageInfo) {
         const transactions = await DB.getTransactionsByAccount(accountId);
+        const pageSize = 8;
+        this._accountDetailTotalPages = Math.ceil(transactions.length / pageSize) || 1;
+
+        if (this._accountDetailPage > this._accountDetailTotalPages) {
+            this._accountDetailPage = this._accountDetailTotalPages;
+        }
+
+        const startIndex = (this._accountDetailPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageTransactions = transactions.slice(startIndex, endIndex);
 
         if (transactions.length === 0) {
             historyList.innerHTML = `<p class="muted">${i18n.currentLang === 'zh' ? '暂无记录' : 'No records'}</p>`;
         } else {
-            historyList.innerHTML = transactions.map(t => {
+            historyList.innerHTML = pageTransactions.map(t => {
                 const changeClass = t.amount >= 0 ? 'positive' : 'negative';
                 const changeSign = t.amount >= 0 ? '+' : '';
                 return `
@@ -1447,7 +1576,9 @@ const Accounts = {
             }).join('');
         }
 
-        App.openModal(modal);
+        pageInfo.textContent = `${this._accountDetailPage} / ${this._accountDetailTotalPages}`;
+        prevBtn.disabled = this._accountDetailPage <= 1;
+        nextBtn.disabled = this._accountDetailPage >= this._accountDetailTotalPages;
     },
 
     /**
