@@ -762,6 +762,7 @@ const Recurring = {
         document.getElementById('btnCancelEdit')?.addEventListener('click', async () => {
             this.editingId = null;
             document.getElementById('btnCancelEdit').classList.add('hidden');
+            document.querySelector('#recurringModal .modal-cancel').classList.remove('hidden');
             document.getElementById('btnSaveRecurring').textContent = i18n.t('add');
             document.getElementById('recurringModalTitle').textContent = this.context.kind === 'investment' ? i18n.t('dca') : i18n.t('recurring');
             document.getElementById('recurringForm').reset();
@@ -816,6 +817,7 @@ const Recurring = {
 
         this.editingId = null;
         document.getElementById('btnCancelEdit').classList.add('hidden');
+        document.querySelector('#recurringModal .modal-cancel').classList.remove('hidden');
         document.getElementById('btnSaveRecurring').textContent = i18n.t('add');
 
         kindEl.value = this.context.kind || '';
@@ -924,7 +926,7 @@ const Recurring = {
             return `
                 <div class="history-item recurring-item" data-id="${r.id}">
                     <span class="history-date">${this.escapeHtml(String(r.nextRun || '-'))}</span>
-                    <span class="history-reason">${this.escapeHtml(this.describeRule(r))}</span>
+                    <span class="history-reason">${this.describeRule(r)}</span>
                     <span class="history-balance">
                         <button type="button" class="btn btn-secondary" data-action="edit">${this.escapeHtml(i18n.t('edit'))}</button>
                         <button type="button" class="btn btn-secondary" data-action="toggle">${this.escapeHtml(tag)}</button>
@@ -956,23 +958,39 @@ const Recurring = {
             };
             detail = map[Number(r.weekday)] || '';
         }
-        if (freq === 'monthly') detail = `${i18n.t('monthDay')} ${Number(r.monthDay || 1)}`;
+        if (freq === 'monthly') detail = `第 ${Number(r.monthDay || 1)}日`;
         if (freq === 'yearly') detail = `${i18n.t('yearDay')} ${Number(r.yearDay || 1)}`;
 
+        const amount = Number(r.amount || 0);
+        let amountStr = '';
+        let amountClass = '';
         if (r.action === 'income') {
-            return `${i18n.t('scheduleIncome')} · ${freqLabel}${detail ? ' · ' + detail : ''} · ${App.formatCurrency(Number(r.amount || 0))}${r.note ? ' · ' + r.note : ''}`;
+            amountStr = `¥+${amount.toFixed(2)}`;
+            amountClass = 'positive';
+        } else if (r.action === 'expense') {
+            amountStr = `¥-${amount.toFixed(2)}`;
+            amountClass = 'negative';
+        } else {
+            amountStr = App.formatCurrency(amount);
+        }
+
+        if (r.action === 'income') {
+            return `${freqLabel}${detail ? ' · ' + detail : ''} · <span class="${amountClass}">${amountStr}</span>${r.note ? ' · ' + this.escapeHtml(r.note) : ''}`;
+        }
+        if (r.action === 'expense') {
+            return `${freqLabel}${detail ? ' · ' + detail : ''} · <span class="${amountClass}">${amountStr}</span>${r.note ? ' · ' + this.escapeHtml(r.note) : ''}`;
         }
         if (r.action === 'transfer') {
             const fromName = this.cache.accounts.find(a => Number(a.id) === Number(r.fromAccountId || r.accountId))?.name || '-';
             const toName = this.cache.accounts.find(a => Number(a.id) === Number(r.toAccountId))?.name || '-';
-            return `${i18n.t('scheduleTransfer')} · ${freqLabel}${detail ? ' · ' + detail : ''} · ${fromName} → ${toName} · ${App.formatCurrency(Number(r.amount || 0))}${r.note ? ' · ' + r.note : ''}`;
+            return `${i18n.t('scheduleTransfer')} · ${freqLabel}${detail ? ' · ' + detail : ''} · ${this.escapeHtml(fromName)} → ${this.escapeHtml(toName)} · ${amountStr}${r.note ? ' · ' + this.escapeHtml(r.note) : ''}`;
         }
         if (r.action === 'dca') {
             const fromName = this.cache.accounts.find(a => Number(a.id) === Number(r.fromAccountId))?.name || '-';
             const invName = this.cache.investments.find(i => Number(i.id) === Number(r.investmentId))?.name || '-';
-            return `${i18n.t('dca')} · ${freqLabel}${detail ? ' · ' + detail : ''} · ${fromName} → ${invName} · ${App.formatCurrency(Number(r.amount || 0))}${r.note ? ' · ' + r.note : ''}`;
+            return `${i18n.t('dca')} · ${freqLabel}${detail ? ' · ' + detail : ''} · ${this.escapeHtml(fromName)} → ${this.escapeHtml(invName)} · ${amountStr}${r.note ? ' · ' + this.escapeHtml(r.note) : ''}`;
         }
-        return `${freqLabel}${detail ? ' · ' + detail : ''} · ${App.formatCurrency(Number(r.amount || 0))}`;
+        return `${freqLabel}${detail ? ' · ' + detail : ''} · ${amountStr}`;
     },
 
     async saveFromForm() {
@@ -1039,6 +1057,7 @@ const Recurring = {
             await DB.updateRecurringRule(base);
             this.editingId = null;
             document.getElementById('btnCancelEdit').classList.add('hidden');
+            document.querySelector('#recurringModal .modal-cancel').classList.remove('hidden');
             document.getElementById('btnSaveRecurring').textContent = i18n.t('add');
             document.getElementById('recurringModalTitle').textContent = this.context.kind === 'investment' ? i18n.t('dca') : i18n.t('recurring');
             App.showToast(i18n.t('scheduleSaved'));
@@ -1115,10 +1134,12 @@ const Recurring = {
         const title = document.getElementById('recurringModalTitle');
         const saveBtn = document.getElementById('btnSaveRecurring');
         const cancelEditBtn = document.getElementById('btnCancelEdit');
+        const cancelBtn = document.querySelector('#recurringModal .modal-cancel');
 
         title.textContent = i18n.currentLang === 'zh' ? '编辑周期任务' : 'Edit Schedule';
         saveBtn.textContent = i18n.t('save');
         cancelEditBtn.classList.remove('hidden');
+        cancelBtn.classList.add('hidden');
 
         document.getElementById('recurringKind').value = rule.kind || '';
         document.getElementById('recurringAccountId').value = rule.accountId || '';
@@ -1248,6 +1269,26 @@ const Recurring = {
                 newBalance: account.balance,
                 amount: Number(rule.amount || 0),
                 reason: rule.note || (i18n.currentLang === 'zh' ? '周期入账' : 'Recurring income'),
+                date: dateStr
+            });
+            return true;
+        }
+
+        if (rule.action === 'expense' && rule.accountId) {
+            const account = await DB.getAccount(Number(rule.accountId));
+            if (!account) return false;
+            const prev = Number(account.balance || 0);
+            const amount = Number(rule.amount || 0);
+            if (amount > prev) return false;
+            account.balance = prev - amount;
+            await DB.updateAccount(account);
+            await DB.addTransaction({
+                accountId: Number(account.id),
+                type: 'recurring_expense',
+                previousBalance: prev,
+                newBalance: account.balance,
+                amount: -amount,
+                reason: rule.note || (i18n.currentLang === 'zh' ? '周期出账' : 'Recurring expense'),
                 date: dateStr
             });
             return true;
